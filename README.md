@@ -2,7 +2,7 @@
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round already in progress. Up to
-4 players (one per color: Sky, Pink, Lime, Violet); extra visitors spectate.
+6 players (one per color: Sky, Pink, Lime, Violet....); extra visitors spectate.
 
 ## Files
 - `server.js` — Express + Socket.IO server (one always-running game room).
