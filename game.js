@@ -132,7 +132,9 @@ function usesNumbers(litStrs, availNums){
   }
   return rec(litStrs.slice(), pieces);
 }
-function prettyEq(s){ return s.replace(/sqrt/g,'√').replace(/\*/g,'×').replace(/\//g,'÷'); }
+/* display: show the 'l' log-shorthand as 'log' (a lone l next to a digit/paren),
+   and prettify operators. The lone-l rule never touches the 'l' inside "log". */
+function prettyEq(s){ return s.replace(/l(?![a-zA-Z])/g,'log').replace(/sqrt/g,'√').replace(/\*/g,'×').replace(/\//g,'÷'); }
 
 /* ================= Computer solver ================= */
 let _budget=0;
@@ -382,11 +384,13 @@ class Game {
     this.timeLeft += timeBonus(this.timeLeft);
     const both=pair.tiles.every(x=>x.done);
     const locked=both && pair.tiles[0].color===pair.tiles[1].color;
-    if(locked){ pair.color=pair.tiles[0].color; this.onFx({type:'lock', pi}); }
+    if(locked){ pair.color=pair.tiles[0].color; }
     const msg = isSteal ? '🏴 Stolen! Pair locked for you (worth 3).'
               : locked ? '🔒 Pair locked! (worth 3 pts)'
               : both   ? '✓ Correct! +1  (split pair)'
               : '✓ Correct! +1 — lock it by taking its partner in your color.';
+    // tell every client a tile was taken (for the 5s highlight, lock pop, and sounds)
+    this.onFx({type:'claim', color, pi, ti, locked, isSteal});
     if(this.boardSettled()) this.endRound(true);
     this.onChange();
     return {ok:true, message:msg};
