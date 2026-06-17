@@ -132,8 +132,6 @@ function usesNumbers(litStrs, availNums){
   }
   return rec(litStrs.slice(), pieces);
 }
-/* display: show the 'l' log-shorthand as 'log' (a lone l next to a digit/paren),
-   and prettify operators. The lone-l rule never touches the 'l' inside "log". */
 function prettyEq(s){ return s.replace(/l(?![a-zA-Z])/g,'log').replace(/sqrt/g,'√').replace(/\*/g,'×').replace(/\//g,'÷'); }
 
 /* ================= Computer solver ================= */
@@ -258,7 +256,7 @@ function solveAll(dice){
 
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
-const ROUND=120, COOLDOWN=15000;
+const ROUND=120, COOLDOWN=15000, CROSS_AT=30;
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
   [42,21],[50,25],[64,32],[63,21],[32,4],
@@ -328,8 +326,12 @@ class Game {
   constructor(onChange, onFx){
     this.onChange = onChange ? (()=>onChange(this)) : (()=>{});
     this.onFx = onFx || (()=>{});
-    this.taken = {};    // colorHex -> socketId
-    this.sockets = {};  // socketId -> colorHex
+    this.taken = {};      // colorHex -> socketId
+    this.sockets = {};    // socketId -> colorHex
+    this.initials = {};   // colorHex -> 2-letter initials
+    this.history = [];    // last up-to-5 round score snapshots
+    this.mutationsPending = { prematureCross:false };  // toggled by players; applies next round
+    this.mutationsActive  = { prematureCross:false };  // in effect for the current round
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>this.tick(), 1000);
@@ -344,41 +346,48 @@ class Game {
       return {tiles, color:null};
     });
     this.timeLeft=ROUND; this.ended=false; this.cleared=false; this.claimLog={};
+    this.mutationsActive = { prematureCross: !!this.mutationsPending.prematureCross };
+    this.crossComputed = false;
     this.roundId++;
     this.onChange();
   }
   tick(){
     if(this.ended) return;   // paused after a round ends until someone presses New Game
     this.timeLeft--;
+    if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; }
     if(this.timeLeft<=0){ this.timeLeft=0; this.endRound(false); return; }
     this.onChange();
+  }
+  _computeCrosses(){
+    const map=solveAll(this.avail);
+    this.pairs.forEach(p=>p.tiles.forEach(t=>{ if(!t.done) t.crossed = !(map[t.val]&&map[t.val].length); }));
   }
   endRound(cleared){
     if(this.ended) return;
     this.ended=true; this.cleared=cleared;
     const map=solveAll(this.avail);
     this.pairs.forEach(p=>p.tiles.forEach(t=>{ if(!t.done) t.cheat=(map[t.val]||[]).slice(0,3); }));
-    // No auto-restart — the next round begins only when a player presses New Game.
+    this.history.push(computeScores(this.pairs)); if(this.history.length>5) this.history.shift();
     this.onChange();
   }
   boardSettled(){ return this.pairs.every(p=> p.tiles[0].done && p.tiles[1].done && isLocked(p)); }
 
   claim(color, pi, ti, eq){
     if(this.ended) return {ok:false, message:'Round is over — press New Game for the next one.'};
-    if(!color) return {ok:false, message:'Pick a color first (top-left).'};
+    if(!color) return {ok:false, message:'Pick a color first (left).'};
     const pair=this.pairs[pi]; if(!pair) return {ok:false, message:'Bad tile.'};
     const t=pair.tiles[ti]; if(!t) return {ok:false, message:'Bad tile.'};
     const now=Date.now();
     if(t.done && !stealable(this.pairs,pi,ti,color,now)) return {ok:false, message:'You can’t take that tile right now.'};
     const vleft=valueCooldownLeft(this.claimLog,color,t.val,now);
-    if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — wait '+Math.ceil(vleft/1000)+'s.'};
+    if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — wait a moment.'};
     let r; try{ r=evaluate(eq||''); }catch(e){ return {ok:false, message:'⚠ '+e.message}; }
     if(!usesNumbers(r.litStrs, this.avail)) return {ok:false, message:'✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
     // apply
     const isSteal=t.done;
     const closed=autoClose(eq);
-    t.done=true; t.color=color; t.claimAt=now; t.eq=closed;
+    t.done=true; t.color=color; t.claimAt=now; t.eq=closed; t.crossed=false;
     t.history=t.history||[]; t.history.push({color, eq:closed});
     this.claimLog[color]=this.claimLog[color]||{}; this.claimLog[color][t.val]=now;
     this.timeLeft += timeBonus(this.timeLeft);
@@ -389,7 +398,6 @@ class Game {
               : locked ? '🔒 Pair locked! (worth 3 pts)'
               : both   ? '✓ Correct! +1  (split pair)'
               : '✓ Correct! +1 — lock it by taking its partner in your color.';
-    // tell every client a tile was taken (for the 5s highlight, lock pop, and sounds)
     this.onFx({type:'claim', color, pi, ti, locked, isSteal});
     if(this.boardSettled()) this.endRound(true);
     this.onChange();
@@ -405,18 +413,28 @@ class Game {
   pickColor(id, hex){
     if(!COLORS.find(c=>c.hex===hex)) return this.sockets[id]||null;
     if(this.taken[hex] && this.taken[hex]!==id) return this.sockets[id]||null;
-    const old=this.sockets[id]; if(old && old!==hex) delete this.taken[old];
+    const old=this.sockets[id]; if(old && old!==hex){ delete this.taken[old]; delete this.initials[old]; }
     this.taken[hex]=id; this.sockets[id]=hex;
     this.onChange();
     return hex;
   }
+  setInitials(id, text){
+    const c=this.sockets[id]; if(!c) return;
+    this.initials[c]=String(text||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase();
+    this.onChange();
+  }
+  setMutation(key, on){
+    if(this.mutationsPending.hasOwnProperty(key)){ this.mutationsPending[key]=!!on; this.onChange(); }
+  }
   removeSocket(id){
-    const c=this.sockets[id]; if(c) delete this.taken[c];
+    const c=this.sockets[id]; if(c){ delete this.taken[c]; delete this.initials[c]; }
     delete this.sockets[id];
     this.onChange();
   }
   forceNew(){ this.startRound(); }
   forceEnd(){ if(!this.ended) this.endRound(false); }
+
+  recentFor(hex){ return this.history.reduce((s,snap)=>s+(snap[hex]||0),0); }
 
   serialize(){
     const now=Date.now();
@@ -424,16 +442,18 @@ class Game {
       roundId:this.roundId,
       ended:this.ended, cleared:this.cleared,
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
+      mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({
         color:p.color||null,
         tiles:p.tiles.map(t=>({
           val:t.val, done:!!t.done, color:t.color||null,
           age: t.done ? (now-(t.claimAt||now)) : null,
           history: t.history||null,
+          crossed: !!t.crossed,
           cheat: (this.ended && !t.done) ? (t.cheat||[]) : null
         }))
       })),
-      players: COLORS.map(c=>({hex:c.hex,name:c.name,taken:!!this.taken[c.hex]})),
+      players: COLORS.map(c=>({hex:c.hex,name:c.name,taken:!!this.taken[c.hex],initials:this.initials[c.hex]||'',recent:this.recentFor(c.hex)})),
       scores: computeScores(this.pairs)
     };
   }

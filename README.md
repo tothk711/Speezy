@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v2.1)
+# Špeezy — Multiplayer (v2.2)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players
@@ -11,9 +11,6 @@ server; anyone who opens the URL joins the round in progress. Up to 6 players
 - `public/index.html` — the game client.
 - `package.json` — dependencies + start script.
 
-The server finds `index.html` whether it sits in `public/` or at the repo root,
-so a flat upload works too.
-
 ## Run locally
 ```bash
 npm install
@@ -22,21 +19,23 @@ npm start
 Open http://localhost:3000 in a few tabs to test.
 
 ## Deploy to Railway (from GitHub)
-1. Put these files in a GitHub repo (a flat layout at the root is fine — keep
+1. Put these files in a GitHub repo (flat at the root is fine — keep
    `index.html`, `game.js`, `server.js`, `package.json`). Don't commit `node_modules`.
-2. Railway → New Project → Deploy from GitHub repo → pick it. It runs
-   `npm install` then `npm start` and reads `PORT` automatically.
-3. Service → Settings → Networking → Generate Domain for a public URL. Share it.
+2. Railway → New Project → Deploy from GitHub repo → pick it. Runs `npm install`
+   then `npm start`, reads `PORT` automatically.
+3. Service → Settings → Networking → Generate Domain. Share the URL.
 
-## What's new in 2.1
-- Your typed equation now stays in the calculator until you delete it or claim with it.
-- Factorial button is labelled `!`; the target shows `✕` when nothing is picked.
-- A taken cell is highlighted for everyone for 5 seconds.
-- Sounds: gentle chime for your point, a soft note when an opponent takes a tile,
-  and a distinct sound when someone steals (locks) a pair. The final-8-seconds
-  ticking is shorter than before.
-- The `l` log-shorthand is shown as `log` in the end-of-round recaps.
-- Pressing New Game clears any stuck hover tooltips for everyone.
+## What's new in 2.2
+- Calculator messages fade out after 5 seconds.
+- Left-side player roster (aligned with the timer box): your editable 2-letter
+  initials, the color, and that color's points across the last 5 rounds.
+- One unified, server-driven sound when any tile is taken (same for everyone);
+  distinct sounds for locking a pair and for a steal.
+- Protected tiles show a live ticking countdown; bigger emotes on tiles; the
+  frozen "wait Xs" text was removed from calculator messages.
+- Mutations toggle (under the calculator). First one: **Premature crossing off** —
+  when on, impossible tiles get the red ✗ at the 0:30 mark. Off by default; a
+  change takes effect on the next board (after New Game).
 
 ## Notes
 No accounts, no lobbies, no anti-cheat — built for a trusted group of friends.
