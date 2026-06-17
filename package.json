@@ -1,7 +1,7 @@
 {
-  "name": "speezy-mp",
-  "version": "1.7.2",
-  "description": "Speezy - a multiplayer math dice game",
+  "name": "speezy",
+  "version": "2.0.0",
+  "description": "Speezy - a real-time multiplayer math dice game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

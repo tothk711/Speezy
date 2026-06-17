@@ -1,6 +1,6 @@
 /* Špeezy shared module — runs in both Node (server) and the browser (client).
-   Exposes the math engine, the computer solver, pure rule helpers, constants,
-   and (Node only) the authoritative Game state machine. */
+   Math engine, computer solver, pure rule helpers, constants, and (Node only)
+   the authoritative Game state machine. */
 (function(global){
 'use strict';
 
@@ -256,7 +256,7 @@ function solveAll(dice){
 
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
-const ROUND=120, TIME_BONUS=20, COOLDOWN=15000, REVIEW_MS=18000;
+const ROUND=120, COOLDOWN=15000;
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
   [42,21],[50,25],[64,32],[63,21],[32,4],
@@ -279,6 +279,9 @@ const COLORS=[
   {name:'Amber', hex:'#fb923c'},
   {name:'Teal',  hex:'#2dd4bf'}
 ];
+
+/* time bonus per correct number: +5s with time to spare, +30s when under a minute */
+function timeBonus(timeLeft){ return timeLeft > 60 ? 5 : 30; }
 
 /* ================= Pure rule helpers ================= */
 function isLocked(pair){ return pair.tiles[0].done && pair.tiles[1].done && pair.tiles[0].color===pair.tiles[1].color; }
@@ -314,8 +317,8 @@ function computeScores(pairs){
 /* ================= API ================= */
 const API={
   autoClose, evaluate, usesNumbers, solveAll, prettyEq,
-  isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores,
-  D3, ROUND, TIME_BONUS, COOLDOWN, REVIEW_MS, POOL, COLORS
+  isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores, timeBonus,
+  D3, ROUND, COOLDOWN, POOL, COLORS
 };
 
 /* ================= Server-only: authoritative Game ================= */
@@ -326,12 +329,10 @@ class Game {
     this.taken = {};    // colorHex -> socketId
     this.sockets = {};  // socketId -> colorHex
     this.roundId = 0;
-    this.reviewTimer = null;
     this.startRound();
     this.loop = setInterval(()=>this.tick(), 1000);
   }
   startRound(){
-    if(this.reviewTimer){ clearTimeout(this.reviewTimer); this.reviewTimer=null; }
     const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6), d3=D3[Math.floor(Math.random()*6)];
     this.avail=[d1,d2,d3];
     const picked=[...POOL].sort(()=>Math.random()-0.5).slice(0,12);
@@ -361,7 +362,7 @@ class Game {
   boardSettled(){ return this.pairs.every(p=> p.tiles[0].done && p.tiles[1].done && isLocked(p)); }
 
   claim(color, pi, ti, eq){
-    if(this.ended) return {ok:false, message:'Round is over — next one starts shortly.'};
+    if(this.ended) return {ok:false, message:'Round is over — press New Game for the next one.'};
     if(!color) return {ok:false, message:'Pick a color first (top-left).'};
     const pair=this.pairs[pi]; if(!pair) return {ok:false, message:'Bad tile.'};
     const t=pair.tiles[ti]; if(!t) return {ok:false, message:'Bad tile.'};
@@ -378,7 +379,7 @@ class Game {
     t.done=true; t.color=color; t.claimAt=now; t.eq=closed;
     t.history=t.history||[]; t.history.push({color, eq:closed});
     this.claimLog[color]=this.claimLog[color]||{}; this.claimLog[color][t.val]=now;
-    this.timeLeft+=TIME_BONUS;
+    this.timeLeft += timeBonus(this.timeLeft);
     const both=pair.tiles.every(x=>x.done);
     const locked=both && pair.tiles[0].color===pair.tiles[1].color;
     if(locked){ pair.color=pair.tiles[0].color; this.onFx({type:'lock', pi}); }
