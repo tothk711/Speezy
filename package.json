@@ -1,0 +1,16 @@
+{
+  "name": "speezy-mp",
+  "version": "1.7.1",
+  "description": "Speezy - a multiplayer math dice game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.22.2",
+    "socket.io": "^4.8.3"
+  }
+}

@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Špeezy</title>
+<style>
+  :root{
+    --bg:#0f1224; --panel:#181c34; --panel2:#1f2442;
+    --green:#4ade80; --yellow:#fbbf24; --accent2:#38bdf8;
+    --salmon:#ff8a73;
+    --text:#e8ebff; --muted:#8b91b8; --danger:#f87171;
+    --line:#2a2f52;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Segoe UI",system-ui,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1b2046,#0f1224 60%);
+    color:var(--text); min-height:100vh; padding:24px; overflow-x:hidden;
+  }
+  .wrap{max-width:1320px;margin:0 auto}
+
+  .topwrap{position:relative;margin-bottom:4px}
+  .palette{position:absolute;left:0;top:0;display:flex;gap:9px;align-items:center;z-index:5}
+  .swatch{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,.22);
+    display:flex;align-items:center;justify-content:center;color:#0c0f22;font-weight:900;font-size:14px;
+    line-height:1;transition:transform .12s, outline-color .12s, opacity .12s}
+  .swatch:hover{transform:scale(1.12)}
+  .swatch.free{opacity:.38}
+  .swatch.free:hover{opacity:.85}
+  .swatch.taken{cursor:default}
+  .swatch.mine{outline:3px solid #fff;outline-offset:2px;border-color:transparent;opacity:1;cursor:default}
+  .conn{position:absolute;right:0;top:6px;font-size:11px;color:var(--muted)}
+  .conn b{color:var(--green)}
+  .conn.off b{color:var(--danger)}
+
+  h1{margin:0;font-size:28px;letter-spacing:.5px;position:relative;text-align:center;padding-bottom:12px;pointer-events:none}
+  h1 span{color:var(--green)}
+  h1::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:64px;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,transparent,var(--salmon),transparent)}
+
+  .layout{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-top:18px}
+  .main{flex:1 1 480px;min-width:0}
+  .side{flex:1 1 320px;max-width:380px;position:sticky;top:24px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .stats{display:flex;gap:34px;align-items:center;justify-content:center;position:relative;flex-wrap:wrap;margin-bottom:18px;
+    transition:background .4s, border-color .4s}
+  .stats.timeup{border-color:rgba(248,113,113,.55);background:rgba(248,113,113,.10)}
+  .stat{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .stat b{font-size:24px;display:inline-block;transition:transform .2s ease}
+  .scores{display:flex;gap:18px;align-items:center;min-height:30px;justify-content:center;flex-wrap:wrap}
+  .score{display:flex;align-items:center;gap:6px}
+  .score .dot{width:11px;height:11px;border-radius:50%}
+  .scnum{font-size:24px;font-weight:800}
+  .newgame-wrap{position:absolute;right:16px;top:50%;transform:translateY(-50%);display:flex;gap:8px}
+  @keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-16px)}}
+
+  button{
+    cursor:pointer;border:none;border-radius:10px;padding:11px 16px;font-size:14px;
+    font-weight:600;background:var(--accent2);color:#03263a;transition:.15s transform,.15s filter;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+  button.gold{background:var(--yellow);color:#3a2c00}
+
+  .dice-row{display:flex;gap:20px;align-items:center;justify-content:center}
+  .dice-set{display:flex;gap:14px;align-items:center}
+  .dice-emoji{font-size:64px;line-height:1;user-select:none}
+  .die{
+    width:72px;height:72px;border-radius:16px;background:linear-gradient(145deg,#272d54,#1a1f3c);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    font-size:28px;font-weight:800;color:#fff;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.35);
+  }
+  .die small{position:absolute;top:6px;left:9px;font-size:10px;color:var(--muted);font-weight:600}
+  .die.rolling{animation:shake .5s ease}
+  @keyframes shake{
+    0%,100%{transform:translateY(0) rotate(0)}
+    25%{transform:translateY(-6px) rotate(-8deg)}
+    50%{transform:translateY(0) rotate(6deg)}
+    75%{transform:translateY(-4px) rotate(-4deg)}
+  }
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-top:6px}
+  .pair{
+    display:flex;gap:10px;padding:10px;border:1px dashed var(--line);border-radius:16px;
+    background:rgba(255,255,255,.015);position:relative;
+    transition:border-color .2s, background .2s, box-shadow .2s, transform .2s;
+  }
+  .lockbadge{
+    position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+    width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:15px;border:2px solid var(--panel);box-shadow:0 4px 12px rgba(0,0,0,.55);z-index:4;
+  }
+  @keyframes pairPop{0%{transform:scale(1)}30%{transform:scale(1.07)}60%{transform:scale(.985)}100%{transform:scale(1)}}
+  .pair.pop{animation:pairPop .55s ease}
+  .target{
+    flex:1;aspect-ratio:1/1;border-radius:12px;background:var(--panel2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;
+    cursor:pointer;transition:.15s;user-select:none;position:relative;
+  }
+  .target:hover{border-color:var(--accent2);transform:translateY(-2px)}
+  .target.selected{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+  .target.cursor{box-shadow:0 0 0 3px var(--salmon);border-color:var(--salmon)}
+  .target .num{position:relative;z-index:1}
+  .target .tick{position:absolute;top:5px;right:8px;font-size:16px;font-weight:900;z-index:3}
+  .target .shield{position:absolute;top:4px;left:6px;font-size:13px;z-index:3}
+  .target .cdbadge{position:absolute;bottom:4px;left:6px;font-size:13px;z-index:3}
+  .target.done{cursor:default}
+  .target.reveal{cursor:help}
+  .target.stealable{cursor:pointer;animation:stealBob 1.1s ease-in-out infinite}
+  .target.protected{cursor:not-allowed}
+  .target.cooldown{opacity:.45;cursor:not-allowed}
+  @keyframes stealBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  .target.impossible::after{
+    content:"";position:absolute;inset:8px;pointer-events:none;z-index:2;opacity:.72;
+    background:
+      linear-gradient(to top right, transparent calc(50% - 1.6px), var(--danger) calc(50% - 1.6px), var(--danger) calc(50% + 1.6px), transparent calc(50% + 1.6px)),
+      linear-gradient(to bottom right, transparent calc(50% - 1.6px), var(--danger) calc(50% - 1.6px), var(--danger) calc(50% + 1.6px), transparent calc(50% + 1.6px));
+  }
+
+  .solver{
+    position:relative;
+    border:2px solid transparent;border-radius:16px;padding:18px 20px;
+    background-image:linear-gradient(var(--panel),var(--panel)),linear-gradient(140deg,var(--accent2),var(--salmon) 75%);
+    background-origin:border-box;background-clip:padding-box,border-box;
+    box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  .calc-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .bigtarget{font-size:44px;font-weight:900;color:var(--accent2);line-height:1;transition:color .2s}
+  .gear{width:38px;height:38px;min-width:0;padding:0;border-radius:10px;background:var(--panel2);
+    border:1px solid var(--line);color:var(--muted);font-size:17px;display:flex;align-items:center;justify-content:center}
+  .gear.on{color:var(--text);border-color:var(--salmon)}
+  .ops{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px}
+  .ops button{background:var(--panel2);color:var(--text);border:1px solid var(--line);padding:9px 13px;font-size:16px;min-width:42px}
+  .diceblock{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px}
+  .diceblock button{background:linear-gradient(145deg,#222a4c,#1a2140);color:#fff;border:1px solid rgba(56,189,248,.45);
+    padding:9px 14px;font-size:17px;font-weight:800;min-width:50px;border-radius:10px;cursor:pointer}
+  .diceblock button:hover{filter:brightness(1.12)}
+  #settings{display:none}
+  #settings.show{display:block}
+  #equation{
+    width:100%;padding:14px 16px;font-size:20px;border-radius:12px;background:#0c0f22;
+    border:1px solid var(--line);color:var(--text);outline:none;font-family:"Consolas",monospace;
+  }
+  #equation:focus{border-color:var(--salmon);box-shadow:0 0 0 2px rgba(255,138,115,.25)}
+  #equation:disabled{opacity:.5;cursor:not-allowed}
+  .preview{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0;font-size:14px}
+  .pill{padding:6px 12px;border-radius:20px;background:var(--panel2);border:1px solid var(--line)}
+  .pill.ok{border-color:var(--green);color:var(--green)}
+  .pill.bad{border-color:var(--danger);color:var(--danger)}
+  .actions{display:flex;gap:14px;align-items:center;margin-top:12px}
+  .live-result{font-size:20px;font-weight:800;color:var(--text);font-family:"Consolas",monospace}
+  .msg{min-height:20px;font-size:14px;margin-top:10px}
+  .msg.ok{color:var(--green)}
+  .msg.bad{color:var(--danger)}
+  .msg.steal{color:var(--salmon)}
+
+  #tip{
+    position:fixed; pointer-events:none; z-index:60; left:0; top:0;
+    background:#0c0f22; border:2px solid var(--salmon); color:var(--text);
+    padding:12px 16px; border-radius:12px; font-family:"Consolas",monospace; font-size:20px;
+    box-shadow:0 12px 34px rgba(0,0,0,.6); opacity:0; transform:translateY(4px);
+    transition:opacity .12s, transform .12s; max-width:92vw;
+  }
+  #tip.show{opacity:1; transform:translateY(0)}
+  #tip.cheat{border-color:var(--danger);box-shadow:0 0 0 1px rgba(248,113,113,.3),0 12px 34px rgba(0,0,0,.6)}
+  .tiphead{color:var(--danger);font-weight:800;font-size:15px;margin-bottom:8px;font-family:"Segoe UI",system-ui,sans-serif}
+  .tipline{white-space:nowrap;font-weight:700;line-height:1.45}
+  .tipline+.tipline{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.08)}
+
+  .rules{color:var(--muted);font-size:12.5px;line-height:1.7;margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
+  .rules-toggle{background:none;border:none;color:var(--text);font-weight:700;font-size:14px;cursor:pointer;padding:0;display:flex;align-items:center;gap:8px}
+  .rules-toggle .chev{display:inline-block;color:var(--muted);transition:transform .2s}
+  .rules-toggle.open .chev{transform:rotate(90deg)}
+  .rules-body{margin-top:12px}
+  .rules code{background:var(--panel2);padding:2px 6px;border-radius:6px;color:var(--text)}
+  .rules kbd{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:inherit;font-size:11px}
+  .win{display:none;text-align:center;padding:22px;margin-top:16px;border:1px solid var(--yellow);border-radius:14px;background:rgba(251,191,36,.08)}
+  .win.show{display:block}
+  .win b{color:var(--yellow);font-size:24px}
+  .winscores{display:flex;gap:24px;justify-content:center;align-items:center;flex-wrap:wrap;margin:12px 0 12px;font-size:30px;font-weight:900}
+  .winscore{display:flex;align-items:center;gap:8px}
+  .winscore .dot{width:14px;height:14px;border-radius:50%}
+  .win .note{color:var(--muted);font-size:13px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topwrap">
+    <div class="palette" id="palette"></div>
+    <div class="conn" id="conn"><b>● connecting…</b></div>
+    <h1>Š<span>peezy</span></h1>
+  </div>
+
+  <div class="layout">
+    <div class="main">
+      <div class="card stats" id="statsCard">
+        <div class="stat"><div class="scores" id="scores"></div></div>
+        <div class="stat"><b id="timer">2:00</b></div>
+        <div class="newgame-wrap">
+          <button id="endRound" class="ghost">End Round</button>
+          <button id="newGame" class="gold">🎲 New Game</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <div class="dice-row">
+          <span class="dice-emoji">🎲</span>
+          <div class="dice-set" id="diceRow">
+            <div class="die"><small>D1</small>?</div>
+            <div class="die"><small>D2</small>?</div>
+            <div class="die"><small>D3</small>?</div>
+          </div>
+          <span class="dice-emoji">🎲</span>
+        </div>
+      </div>
+
+      <div class="grid" id="targets"></div>
+
+      <div class="win" id="win">
+        <b id="winTitle">⏱ Time's up!</b>
+        <div class="winscores" id="winScores"></div>
+        <div class="note" id="winNote">A new round starts automatically…</div>
+        <button class="gold" id="winPlay">Start now</button>
+      </div>
+
+      <div class="rules">
+        <button class="rules-toggle" id="rulesToggle"><span class="chev">▸</span> How it works</button>
+        <div class="rules-body" id="rulesBody" hidden>
+          • Everyone who opens this link joins the <b>same</b> live game. You're auto-given a color (top-left); click another free circle to switch.<br>
+          • Pick a number (click, or move with <kbd>← ↑ → ↓</kbd>) and type an equation using all 3 dice in the calculator.<br>
+          • Solve <b>both</b> halves of a pair in <b>your</b> color to lock it (worth 3). A split pair scores 1 each.<br>
+          • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s.<br>
+          • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
+          • Round = 2:00, +<b style="color:var(--green)">20s</b> per number anyone solves. At the end, hover numbers for solutions; the next round auto-starts.<br>
+          • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>n!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
+          • Version: <b>Špeezy 1.71 (multiplayer)</b>
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="solver" id="solver">
+        <div class="calc-top">
+          <div class="bigtarget" id="solveTarget">—</div>
+          <button class="gear" id="gearBtn" title="More options">⚙</button>
+        </div>
+        <input id="equation" placeholder="pick a number…" autocomplete="off" spellcheck="false" disabled>
+        <div class="ops ops-always">
+          <button data-ins="sqrt(">√</button>
+          <button data-ins="!">n!</button>
+          <button data-ins="log(">log</button>
+          <button data-ins="(">(</button>
+          <button data-ins=")">)</button>
+        </div>
+        <div id="settings">
+          <div class="diceblock" id="numBtns"></div>
+          <div class="ops">
+            <button data-ins="+">+</button>
+            <button data-ins="-">−</button>
+            <button data-ins="*">×</button>
+            <button data-ins="/">÷</button>
+            <button data-ins="^">^</button>
+            <button data-ins="" id="clearBtn" class="ghost">⌫ clear</button>
+          </div>
+          <div class="preview">
+            <span class="pill" id="numsPill">numbers used: —</span>
+          </div>
+          <button id="cancelBtn" class="ghost" style="margin-top:4px">Clear pick</button>
+        </div>
+        <div class="actions">
+          <button id="checkBtn">Check ✓</button>
+          <span class="live-result" id="liveResult"></span>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/game.js"></script>
+<script>
+const { evaluate, usesNumbers, prettyEq, isLocked, stealable, protectedTarget,
+        valueCooldownLeft, COLORS, COOLDOWN } = SPEEZY;
+const $=id=>document.getElementById(id);
+const socket = io();
+
+let G=null, myColor=null, selected=null, cursor=null;
+let myClaimLog={}, lastRoundId=-1, lastAvail='', lastBoardSig='', lastAttempt=null;
+
+function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function setMsg(t,cls){ const m=$('msg'); m.textContent=t; m.className='msg'+(cls?(' '+cls):''); }
+
+/* ---------- socket ---------- */
+socket.on('connect',()=>{ $('conn').className='conn'; $('conn').innerHTML='<b>● live</b>'; });
+socket.on('disconnect',()=>{ $('conn').className='conn off'; $('conn').innerHTML='<b>● disconnected</b>'; });
+socket.on('you', c=>{ myColor=c; if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
+socket.on('fx', f=>{ if(f && f.type==='lock') popPair(f.pi); });
+socket.on('state', onState);
+socket.on('claimResult', r=>{
+  if(!r) return;
+  setMsg(r.message, r.ok ? (r.message && r.message[0]==='🏴' ? 'steal':'ok') : 'bad');
+  if(r.ok){
+    if(lastAttempt && myColor){ myClaimLog[myColor]=myClaimLog[myColor]||{}; myClaimLog[myColor][lastAttempt.val]=Date.now(); }
+    selected=null; $('equation').value=''; updatePreview(); refreshSolver();
+    lastBoardSig=''; renderTargets();
+  }
+});
+
+function onState(st){
+  const now=Date.now();
+  st.pairs.forEach(p=>p.tiles.forEach(t=>{ if(t.done && t.age!=null) t.claimAt = now - t.age; }));
+  const newRound = st.roundId!==lastRoundId;
+  const prevT = G ? G.timeLeft : null;
+  G=st;
+  if(newRound){
+    lastRoundId=st.roundId; myClaimLog={}; selected=null; cursor=null;
+    setMsg('',''); $('equation').value=''; updatePreview();
+    $('statsCard').classList.remove('timeup');
+  }
+  renderDice();
+  updateTimer();
+  if(!newRound && prevT!=null && st.timeLeft>prevT) flashTime();
+  renderScores(); renderPalette();
+  if(st.ended){ showWin(); $('statsCard').classList.toggle('timeup', !st.cleared); }
+  else { hideWin(); $('statsCard').classList.remove('timeup'); }
+  const sig=boardSig();
+  if(sig!==lastBoardSig){ lastBoardSig=sig; renderTargets(); }
+  else highlightCursor();
+  refreshSolver();
+}
+
+/* ---------- palette ---------- */
+function renderPalette(){
+  const pal=$('palette'); pal.innerHTML='';
+  const players = (G && G.players) ? G.players : COLORS.map(c=>({hex:c.hex,taken:false}));
+  players.forEach(c=>{
+    const mine = c.hex===myColor;
+    const free = !c.taken;
+    const s=document.createElement('div');
+    s.className='swatch'+(mine?' mine':'')+(free?' free':' taken');
+    s.style.background=c.hex;
+    s.textContent=mine?'✓':'';
+    s.title = mine ? 'You' : (c.taken ? 'Taken by another player' : 'Click to play as this color');
+    if(free && !mine) s.onclick=()=>socket.emit('pickColor', c.hex);
+    pal.appendChild(s);
+  });
+}
+
+/* ---------- dice ---------- */
+function renderDice(){
+  const a=G.avail.join(',');
+  if(a===lastAvail) return;
+  lastAvail=a;
+  $('diceRow').innerHTML=G.avail.map((d,i)=>'<div class="die rolling"><small>D'+(i+1)+'</small>'+d+'</div>').join('');
+  renderNumButtons();
+}
+function insertText(ins){
+  const inp=$('equation');
+  if(inp.disabled) return;
+  const s=inp.selectionStart, e=inp.selectionEnd;
+  inp.value=inp.value.slice(0,s)+ins+inp.value.slice(e);
+  inp.selectionStart=inp.selectionEnd=s+ins.length;
+  updatePreview(); inp.focus();
+}
+function renderNumButtons(){
+  const el=$('numBtns'); if(!el||!G) return; el.innerHTML='';
+  G.avail.forEach(d=>{
+    const b=document.createElement('button');
+    b.textContent=d;
+    b.onclick=()=>insertText(String(d));
+    el.appendChild(b);
+  });
+}
+
+/* ---------- scores ---------- */
+function renderScores(){
+  const el=$('scores'); el.innerHTML='';
+  const m=G.scores||{};
+  const active=COLORS.filter(c=>(m[c.hex]||0)>0);
+  if(!active.length){ el.innerHTML='<b class="scnum" style="color:'+(myColor||'var(--muted)')+'">0</b>'; return; }
+  active.forEach(c=>{
+    const d=document.createElement('div'); d.className='score';
+    d.innerHTML='<span class="dot" style="background:'+c.hex+'"></span><b class="scnum" style="color:'+c.hex+'">'+m[c.hex]+'</b>';
+    el.appendChild(d);
+  });
+}
+function renderWinScores(){
+  const el=$('winScores'); el.innerHTML='';
+  const m=G.scores||{};
+  const active=COLORS.filter(c=>(m[c.hex]||0)>0).sort((a,b)=>m[b.hex]-m[a.hex]);
+  if(!active.length){ el.innerHTML='<span style="color:var(--muted);font-size:20px">No points yet</span>'; return; }
+  active.forEach(c=>{
+    const d=document.createElement('div'); d.className='winscore';
+    d.innerHTML='<span class="dot" style="background:'+c.hex+'"></span><b style="color:'+c.hex+'">'+m[c.hex]+'</b>';
+    el.appendChild(d);
+  });
+}
+function showWin(){ $('winTitle').textContent=G.cleared?'🏆 Board locked!':"⏱ Time's up!"; renderWinScores(); $('win').classList.add('show'); }
+function hideWin(){ $('win').classList.remove('show'); }
+
+/* ---------- targets ---------- */
+function clientCanSelect(pi,ti){
+  if(!G||G.ended||!myColor) return false;
+  const t=G.pairs[pi].tiles[ti];
+  const base = !t.done ? true : stealable(G.pairs,pi,ti,myColor,Date.now());
+  if(!base) return false;
+  return valueCooldownLeft(myClaimLog,myColor,t.val,Date.now())===0;
+}
+function boardSig(){
+  if(!G) return '';
+  const now=Date.now();
+  return (myColor||'')+'|'+(G.ended?'E':'')+'|'+G.pairs.map((p,pi)=>p.tiles.map((t,ti)=>{
+    let s=t.val+(t.done?('d'+(t.color||'')):'o');
+    if(!G.ended){
+      if(t.done){ if(stealable(G.pairs,pi,ti,myColor,now)) s+='S'; else if(protectedTarget(G.pairs,pi,ti,myColor,now)) s+='P'; }
+      else if(myColor && valueCooldownLeft(myClaimLog,myColor,t.val,now)>0) s+='C';
+    } else if(!t.done){ s+=(t.cheat&&t.cheat.length)?'?':'X'; }
+    return s;
+  }).join(',')).join('|');
+}
+function renderTargets(){
+  if(!G) return;
+  const g=$('targets'); g.innerHTML=''; const now=Date.now();
+  G.pairs.forEach((p,pi)=>{
+    const locked=isLocked(p);
+    const col = locked ? (p.color||p.tiles[0].color) : null;
+    const card=document.createElement('div'); card.className='pair';
+    if(locked){ card.style.border='2px solid '+col; card.style.background=hexA(col,.12); card.style.boxShadow='0 0 0 1px '+col+', 0 0 26px '+hexA(col,.5); }
+    p.tiles.forEach((t,ti)=>{
+      const steal = !G.ended && stealable(G.pairs,pi,ti,myColor,now);
+      const prot  = !G.ended && protectedTarget(G.pairs,pi,ti,myColor,now);
+      const base  = !G.ended && myColor && (!t.done ? true : steal);
+      const vleft = base ? valueCooldownLeft(myClaimLog,myColor,t.val,now) : 0;
+      const blocked = vleft>0;
+      const endedUnsolved = G.ended && !t.done;
+      const d=document.createElement('div');
+      let cls='target';
+      if(t.done) cls+=' done';
+      if(steal && !blocked) cls+=' stealable';
+      if(prot) cls+=' protected';
+      if(blocked) cls+=' cooldown';
+      if(endedUnsolved && (!t.cheat || t.cheat.length===0)) cls+=' impossible';
+      if(selected && selected.p===pi && selected.i===ti) cls+=' selected';
+      if(cursor && cursor.p===pi && cursor.i===ti) cls+=' cursor';
+      d.className=cls; d.dataset.p=pi; d.dataset.i=ti;
+      let badges=(t.done?'<span class="tick">✓</span>':'');
+      if(prot) badges+='<span class="shield">🛡️</span>';
+      if(blocked) badges+='<span class="cdbadge">⏳</span>';
+      d.innerHTML='<span class="num">'+t.val+'</span>'+badges;
+      if(t.done){
+        const tc=t.color||'#888';
+        d.style.color=tc;
+        if(locked){ d.style.border='2px solid '+tc; d.style.background='linear-gradient(145deg,'+hexA(tc,.40)+','+hexA(tc,.20)+')'; }
+        else { d.style.borderColor=tc; d.style.background='linear-gradient(145deg,'+hexA(tc,.16)+','+hexA(tc,.06)+')'; }
+        if(steal && !blocked){ d.style.outline='2px dashed '+myColor; d.style.outlineOffset='2px'; d.title='Steal this tile'; }
+        if(prot){ d.style.outline='2px dashed var(--muted)'; d.style.outlineOffset='2px'; }
+      }
+      if(clientCanSelect(pi,ti)){ d.onclick=()=>selectTile(pi,ti); }
+      else if(blocked){ d.onclick=()=>setMsg('⏳ You claimed a '+t.val+' recently — wait '+Math.ceil(vleft/1000)+'s.',''); }
+      else if(prot){ d.onclick=()=>{ const rem=Math.max(0,Math.ceil((COOLDOWN-(now-(t.claimAt||0)))/1000)); setMsg('🛡️ Protected — stealable in '+rem+'s',''); }; }
+      if(t.done && G.ended) attachTip(d,t);
+      else if(endedUnsolved) attachCheatTip(d,t);
+      card.appendChild(d);
+    });
+    if(locked){ const b=document.createElement('div'); b.className='lockbadge'; b.textContent='🔒'; b.style.background=col; card.appendChild(b); }
+    g.appendChild(card);
+  });
+  if(cursor && !clientCanSelect(cursor.p,cursor.i)) cursor=null;
+  highlightCursor();
+}
+function popPair(pi){ const card=$('targets').children[pi]; if(card){ card.classList.add('pop'); card.addEventListener('animationend',()=>card.classList.remove('pop'),{once:true}); } }
+
+/* ---------- tooltips ---------- */
+function posTip(e){ const tp=$('tip'); tp.style.left=Math.min(e.clientX+16, window.innerWidth-tp.offsetWidth-12)+'px'; tp.style.top=(e.clientY+18)+'px'; }
+function attachTip(el,t){
+  el.classList.add('reveal');
+  const hist=(t.history&&t.history.length)?t.history:(t.eq?[{color:t.color,eq:t.eq}]:[]);
+  if(!hist.length) return;
+  el.addEventListener('mouseenter',()=>{ const tp=$('tip'); tp.classList.remove('cheat');
+    tp.innerHTML=hist.map(h=>'<div class="tipline" style="color:'+(h.color||'#fff')+'">'+prettyEq(h.eq)+' = '+t.val+'</div>').join(''); tp.classList.add('show'); });
+  el.addEventListener('mousemove',posTip);
+  el.addEventListener('mouseleave',()=>{ $('tip').classList.remove('show'); });
+}
+function attachCheatTip(el,t){
+  el.classList.add('reveal');
+  el.addEventListener('mouseenter',()=>{ const tp=$('tip'); tp.classList.add('cheat');
+    if(t.cheat&&t.cheat.length){ tp.innerHTML='<div class="tiphead">❗ Computer solution'+(t.cheat.length>1?'s':'')+'</div>'+t.cheat.map(e=>'<div class="tipline" style="color:#fca5a5">'+prettyEq(e)+' = '+t.val+'</div>').join(''); }
+    else { tp.innerHTML='<div class="tiphead">❗ No solution found</div>'; }
+    tp.classList.add('show'); });
+  el.addEventListener('mousemove',posTip);
+  el.addEventListener('mouseleave',()=>{ const tp=$('tip'); tp.classList.remove('show'); tp.classList.remove('cheat'); });
+}
+
+/* ---------- keyboard nav ---------- */
+function tileEl(p,i){ return $('targets').querySelector('.target[data-p="'+p+'"][data-i="'+i+'"]'); }
+function highlightCursor(){
+  $('targets').querySelectorAll('.target.cursor').forEach(e=>e.classList.remove('cursor'));
+  if(cursor){ const el=tileEl(cursor.p,cursor.i); if(el) el.classList.add('cursor'); }
+}
+function navTiles(){
+  const arr=[];
+  G.pairs.forEach((p,pi)=>p.tiles.forEach((t,ti)=>{ if(clientCanSelect(pi,ti)){ const el=tileEl(pi,ti); if(el) arr.push({pi,ti,rect:el.getBoundingClientRect()}); } }));
+  return arr;
+}
+function moveCursor(dir){
+  if(!G) return;
+  const arr=navTiles(); if(!arr.length) return;
+  const valid = cursor && clientCanSelect(cursor.p,cursor.i) && tileEl(cursor.p,cursor.i);
+  if(!valid){ arr.sort((a,b)=>(a.rect.top-b.rect.top)||(a.rect.left-b.rect.left)); selectTile(arr[0].pi,arr[0].ti); return; }
+  const cur=tileEl(cursor.p,cursor.i).getBoundingClientRect();
+  const cx=cur.left+cur.width/2, cy=cur.top+cur.height/2; let best=null,bs=Infinity;
+  arr.forEach(o=>{
+    if(o.pi===cursor.p && o.ti===cursor.i) return;
+    const ox=o.rect.left+o.rect.width/2, oy=o.rect.top+o.rect.height/2; const dx=ox-cx, dy=oy-cy; let pr,se;
+    if(dir==='right'){ if(dx<=2) return; pr=dx; se=Math.abs(dy); }
+    else if(dir==='left'){ if(dx>=-2) return; pr=-dx; se=Math.abs(dy); }
+    else if(dir==='down'){ if(dy<=2) return; pr=dy; se=Math.abs(dx); }
+    else { if(dy>=-2) return; pr=-dy; se=Math.abs(dx); }
+    const score=pr+se*2; if(score<bs){ bs=score; best=o; }
+  });
+  if(best) selectTile(best.pi,best.ti);
+}
+
+/* ---------- calculator ---------- */
+function refreshSolver(){
+  const has = !!selected && !!myColor && G && !G.ended;
+  $('equation').disabled=!has;
+  if(has){ const t=G.pairs[selected.p].tiles[selected.i]; $('solveTarget').textContent=t.val; $('solveTarget').style.color = t.done? myColor : 'var(--accent2)'; }
+  else { $('solveTarget').textContent='—'; $('solveTarget').style.color='var(--muted)'; }
+}
+function selectTile(pi,ti){
+  if(!clientCanSelect(pi,ti)) return;
+  selected={p:pi,i:ti}; cursor={p:pi,i:ti};
+  $('equation').value=''; setMsg('','');
+  refreshSolver(); updatePreview(); lastBoardSig=''; renderTargets(); $('equation').focus();
+}
+function deselect(){ selected=null; $('equation').value=''; setMsg('',''); refreshSolver(); updatePreview(); lastBoardSig=''; renderTargets(); }
+function updatePreview(){
+  const expr=$('equation').value.trim();
+  const numsPill=$('numsPill'), live=$('liveResult');
+  if(!expr){ numsPill.className='pill'; numsPill.textContent='numbers used: —'; live.textContent=''; return; }
+  try{
+    const {value,literals,litStrs}=evaluate(expr);
+    const usesAll = G && usesNumbers(litStrs, G.avail);
+    numsPill.textContent='numbers used: '+(literals.length?literals.join(', '):'none');
+    numsPill.className='pill '+(usesAll?'ok':'bad');
+    live.textContent='= '+(Number.isInteger(value)?value:value.toFixed(2));
+  }catch(e){ numsPill.className='pill'; numsPill.textContent='numbers used: —'; live.textContent='= ?'; }
+}
+function check(){
+  if(!selected){ setMsg(myColor?'Pick a number first.':'Pick a color first (top-left).','bad'); return; }
+  if(!myColor || !G || G.ended) return;
+  const eq=$('equation').value.trim();
+  if(!eq){ setMsg('Type an equation first.','bad'); return; }
+  lastAttempt={ val: G.pairs[selected.p].tiles[selected.i].val };
+  socket.emit('claim', { pi:selected.p, ti:selected.i, eq });
+}
+
+/* ---------- timer ---------- */
+function updateTimer(){
+  const t=Math.max(0,G.timeLeft||0);
+  $('timer').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
+  $('timer').style.color = (t<=20 && !G.ended) ? 'var(--danger)' : '';
+}
+function flashTime(){
+  const el=$('timer');
+  el.style.position='relative'; el.style.transform='scale(1.2)'; el.style.color='var(--green)';
+  const tag=document.createElement('span');
+  tag.textContent='+20s';
+  tag.style.cssText='position:absolute;left:100%;top:0;margin-left:6px;color:var(--green);font-size:13px;font-weight:700;white-space:nowrap;animation:floatUp .8s ease forwards';
+  el.appendChild(tag);
+  setTimeout(()=>{ el.style.transform=''; updateTimer(); tag.remove(); },800);
+}
+
+/* ---------- wire up ---------- */
+$('newGame').onclick=()=>socket.emit('newGame');
+$('endRound').onclick=()=>socket.emit('endRound');
+$('winPlay').onclick=()=>socket.emit('newGame');
+$('gearBtn').onclick=()=>{ $('settings').classList.toggle('show'); $('gearBtn').classList.toggle('on'); };
+$('rulesToggle').onclick=()=>{
+  const b=$('rulesBody'); const show=b.hasAttribute('hidden');
+  if(show) b.removeAttribute('hidden'); else b.setAttribute('hidden','');
+  $('rulesToggle').classList.toggle('open', show);
+};
+$('equation').addEventListener('input',updatePreview);
+$('equation').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); check(); } });
+$('checkBtn').onclick=check;
+$('cancelBtn').onclick=deselect;
+document.querySelectorAll('.ops button[data-ins]').forEach(b=>{
+  b.onclick=()=>{
+    if($('equation').disabled) return;
+    if(b.id==='clearBtn'){ $('equation').value=''; updatePreview(); $('equation').focus(); return; }
+    insertText(b.getAttribute('data-ins'));
+  };
+});
+document.addEventListener('keydown',e=>{
+  if(!G||G.ended) return;
+  if(e.key.indexOf('Arrow')===0){
+    if($('equation').value.length>0) return;
+    e.preventDefault();
+    moveCursor(e.key.slice(5).toLowerCase());
+  }
+});
+</script>
+</body>
+</html>
