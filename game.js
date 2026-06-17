@@ -345,10 +345,9 @@ class Game {
     this.onChange();
   }
   tick(){
-    if(!this.ended){
-      this.timeLeft--;
-      if(this.timeLeft<=0){ this.timeLeft=0; this.endRound(false); return; }
-    }
+    if(this.ended) return;   // paused after a round ends until someone presses New Game
+    this.timeLeft--;
+    if(this.timeLeft<=0){ this.timeLeft=0; this.endRound(false); return; }
     this.onChange();
   }
   endRound(cleared){
@@ -356,7 +355,7 @@ class Game {
     this.ended=true; this.cleared=cleared;
     const map=solveAll(this.avail);
     this.pairs.forEach(p=>p.tiles.forEach(t=>{ if(!t.done) t.cheat=(map[t.val]||[]).slice(0,3); }));
-    this.reviewTimer=setTimeout(()=>this.startRound(), REVIEW_MS);
+    // No auto-restart — the next round begins only when a player presses New Game.
     this.onChange();
   }
   boardSettled(){ return this.pairs.every(p=> p.tiles[0].done && p.tiles[1].done && isLocked(p)); }
