@@ -10,14 +10,15 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Find a file whether it lives in ./public or right next to server.js (flat repos work).
 const DIRS = [path.join(__dirname, 'public'), __dirname];
 function find(file){
   for (const d of DIRS){ const p = path.join(d, file); if (fs.existsSync(p)) return p; }
   return null;
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
   const idx = find('index.html');
@@ -42,7 +43,7 @@ io.on('connection', (socket) => {
   io.emit('state', game.serialize());
 
   socket.on('pickColor', (hex) => { const c = game.pickColor(socket.id, hex); socket.emit('you', c); });
-  socket.on('setInitials', (t) => game.setInitials(socket.id, t));
+  socket.on('setInitials', (m) => game.setInitials(m && m.hex, m && m.text));
   socket.on('setMutation', (m) => game.setMutation(m && m.key, m && m.on));
   socket.on('claim', (msg) => {
     const color = game.sockets[socket.id];
@@ -57,6 +58,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 const idx = find('index.html');
 server.listen(PORT, () => {
-  console.log('Speezy 2.2 running on port ' + PORT);
+  console.log('Speezy 2.22 running on port ' + PORT);
   console.log('Serving client from: ' + (idx || 'NOT FOUND — check that index.html is in the repo'));
 });

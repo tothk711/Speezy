@@ -1,6 +1,4 @@
-/* Špeezy shared module — runs in both Node (server) and the browser (client).
-   Math engine, computer solver, pure rule helpers, constants, and (Node only)
-   the authoritative Game state machine. */
+/* Špeezy shared module — runs in both Node (server) and the browser (client). */
 (function(global){
 'use strict';
 
@@ -256,7 +254,7 @@ function solveAll(dice){
 
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
-const ROUND=120, COOLDOWN=15000, CROSS_AT=30;
+const ROUND=120, COOLDOWN=15000, CROSS_AT=20, HINT_AT=15;
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
   [42,21],[50,25],[64,32],[63,21],[32,4],
@@ -280,7 +278,6 @@ const COLORS=[
   {name:'Teal',  hex:'#2dd4bf'}
 ];
 
-/* time bonus per correct number: +5s with time to spare, +30s when under a minute */
 function timeBonus(timeLeft){ return timeLeft > 60 ? 5 : 30; }
 
 /* ================= Pure rule helpers ================= */
@@ -326,12 +323,12 @@ class Game {
   constructor(onChange, onFx){
     this.onChange = onChange ? (()=>onChange(this)) : (()=>{});
     this.onFx = onFx || (()=>{});
-    this.taken = {};      // colorHex -> socketId
-    this.sockets = {};    // socketId -> colorHex
-    this.initials = {};   // colorHex -> 2-letter initials
-    this.history = [];    // last up-to-5 round score snapshots
-    this.mutationsPending = { prematureCross:false };  // toggled by players; applies next round
-    this.mutationsActive  = { prematureCross:false };  // in effect for the current round
+    this.taken = {};
+    this.sockets = {};
+    this.initials = {};
+    this.history = [];
+    this.mutationsPending = { prematureCross:false, lastMinuteHints:false };
+    this.mutationsActive  = { prematureCross:false, lastMinuteHints:false };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>this.tick(), 1000);
@@ -346,21 +343,30 @@ class Game {
       return {tiles, color:null};
     });
     this.timeLeft=ROUND; this.ended=false; this.cleared=false; this.claimLog={};
-    this.mutationsActive = { prematureCross: !!this.mutationsPending.prematureCross };
+    this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
     this.roundId++;
     this.onChange();
   }
   tick(){
-    if(this.ended) return;   // paused after a round ends until someone presses New Game
+    if(this.ended) return;
     this.timeLeft--;
     if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; }
+    if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
     if(this.timeLeft<=0){ this.timeLeft=0; this.endRound(false); return; }
     this.onChange();
   }
   _computeCrosses(){
     const map=solveAll(this.avail);
     this.pairs.forEach(p=>p.tiles.forEach(t=>{ if(!t.done) t.crossed = !(map[t.val]&&map[t.val].length); }));
+  }
+  _fireHint(){
+    const map=solveAll(this.avail);
+    const cands=[];
+    this.pairs.forEach((p,pi)=>p.tiles.forEach((t,ti)=>{ if(!t.done && map[t.val] && map[t.val].length) cands.push({pi,ti,sol:map[t.val][0]}); }));
+    if(!cands.length) return;
+    const pick=cands[Math.floor(Math.random()*cands.length)];
+    this.onFx({type:'hint', pi:pick.pi, ti:pick.ti, partial:prettyEq(pick.sol).slice(0,4)});
   }
   endRound(cleared){
     if(this.ended) return;
@@ -384,7 +390,6 @@ class Game {
     let r; try{ r=evaluate(eq||''); }catch(e){ return {ok:false, message:'⚠ '+e.message}; }
     if(!usesNumbers(r.litStrs, this.avail)) return {ok:false, message:'✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
-    // apply
     const isSteal=t.done;
     const closed=autoClose(eq);
     t.done=true; t.color=color; t.claimAt=now; t.eq=closed; t.crossed=false;
@@ -413,21 +418,21 @@ class Game {
   pickColor(id, hex){
     if(!COLORS.find(c=>c.hex===hex)) return this.sockets[id]||null;
     if(this.taken[hex] && this.taken[hex]!==id) return this.sockets[id]||null;
-    const old=this.sockets[id]; if(old && old!==hex){ delete this.taken[old]; delete this.initials[old]; }
+    const old=this.sockets[id]; if(old && old!==hex){ delete this.taken[old]; }
     this.taken[hex]=id; this.sockets[id]=hex;
     this.onChange();
     return hex;
   }
-  setInitials(id, text){
-    const c=this.sockets[id]; if(!c) return;
-    this.initials[c]=String(text||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase();
+  setInitials(hex, text){
+    if(!COLORS.find(c=>c.hex===hex)) return;
+    this.initials[hex]=String(text||'').replace(/[^a-zA-Z0-9]/g,'').slice(0,2).toUpperCase();
     this.onChange();
   }
   setMutation(key, on){
     if(this.mutationsPending.hasOwnProperty(key)){ this.mutationsPending[key]=!!on; this.onChange(); }
   }
   removeSocket(id){
-    const c=this.sockets[id]; if(c){ delete this.taken[c]; delete this.initials[c]; }
+    const c=this.sockets[id]; if(c) delete this.taken[c];
     delete this.sockets[id];
     this.onChange();
   }
