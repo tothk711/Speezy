@@ -165,6 +165,7 @@
     padding:20px 0;font-size:25px;font-weight:800;line-height:1;cursor:pointer;transition:.12s}
   .cbtn:hover{filter:brightness(1.14)}
   .cbtn.num{font-weight:900;border-color:rgba(56,189,248,.5);background:linear-gradient(145deg,#222a4c,#1a2140)}
+  .cbtn.num.dim{opacity:.32;border-color:var(--line);background:var(--panel2);box-shadow:none}  /* this die is already used in the equation */
   .cbtn.word{font-size:19px}
   .cbtn.op{font-size:38px;padding:13px 0}  /* +50% glyph, padding trimmed so the cell stays the same size */
   .cempty{border:1px dashed var(--line);border-radius:12px;opacity:.35}
@@ -271,10 +272,10 @@
             • Solve <b>both</b> halves of a pair in <b>your</b> color to lock it (worth 3). A split pair scores 1 each.<br>
             • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s (watch the countdown on the tile).<br>
             • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
-            • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s</b> (or <b style="color:var(--green)">+30s</b> when under a minute). Press <b>New Game</b> to start the next round.<br>
+            • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. Press <b>New Game</b> to start the next round.<br>
             • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:20 (for 10s, re-triggers each time the clock hits 0:20). Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.24 (multiplayer)</b>
+            • Version: <b>Špeezy 2.25 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -420,7 +421,7 @@ function renderPalette(){
       inp.oninput=()=>socket.emit('setInitials',{hex:c.hex, text:inp.value.toUpperCase()});
       const sw=document.createElement('div'); sw.className='rswatch'; sw.style.background=c.hex;
       sw.onclick=()=>socket.emit('pickColor',c.hex);
-      const rec=document.createElement('div'); rec.className='rrecent'; rec.style.color=c.hex; rec.title='Points in the last 5 rounds';
+      const rec=document.createElement('div'); rec.className='rrecent'; rec.style.color=c.hex; rec.title='Points in the last 4 rounds';
       row.appendChild(inp); row.appendChild(sw); row.appendChild(rec);
       pal.appendChild(row);
     });
@@ -484,9 +485,39 @@ function refreshSolver(){
 function updatePreview(){
   const expr=$('equation').value.trim();
   const live=$('liveResult');
-  if(!expr){ live.textContent='—'; return; }
-  try{ const {value}=evaluate(expr); live.textContent=Number.isInteger(value)?value:value.toFixed(2); }
-  catch(e){ live.textContent='?'; }
+  if(!expr){ live.textContent='—'; }
+  else { try{ const {value}=evaluate(expr); live.textContent=Number.isInteger(value)?value:value.toFixed(2); }
+         catch(e){ live.textContent='?'; } }
+  applyDimming();
+}
+/* ---------- dim each rolled-number key once the equation has consumed that die ---------- */
+function matchLitToDice(lit, vals, avail){
+  if(lit==='') return [];
+  for(let k=0;k<avail.length;k++){
+    const idx=avail[k], s=vals[idx];
+    if(lit.startsWith(s)){
+      const rest=matchLitToDice(lit.slice(s.length), vals, avail.slice(0,k).concat(avail.slice(k+1)));
+      if(rest) return [idx,...rest];
+    }
+  }
+  return null;
+}
+function dieUsage(){
+  const vals=G.avail.map(String);
+  const used=vals.map(()=>false);
+  let avail=vals.map((_,i)=>i);
+  const lits=($('equation').value.match(/\d+/g))||[];
+  for(const lit of lits){
+    const pick=matchLitToDice(lit, vals, avail);
+    if(pick){ pick.forEach(i=>used[i]=true); avail=avail.filter(i=>pick.indexOf(i)<0); }
+  }
+  return used;
+}
+function applyDimming(){
+  const g=$('calcgrid'); if(!g||!G) return;
+  const nums=g.querySelectorAll('.cbtn.num');
+  const used=(!$('equation').disabled) ? dieUsage() : G.avail.map(()=>false);
+  nums.forEach((b,i)=>b.classList.toggle('dim', !!used[i]));
 }
 
 /* ---------- scores / win ---------- */

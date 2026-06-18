@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v2.24)
+# Špeezy — Multiplayer (v2.25)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -18,7 +18,15 @@ Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
 
-## What's new in 2.24
-- Calculator division key now shows **`/`** instead of `÷`.
-- The four basic operator glyphs **`+ − × /`** are ~50% larger (38px). Only the
-  glyph grows — button padding is trimmed to match, so the cells stay the same size.
+## What's new in 2.25
+- **Factorial bug fixed.** Expressions like `(sqrt(5)*sqrt(5))!/4` now work —
+  floating-point dust (e.g. 5.0000000001) is snapped to the nearest integer
+  before the factorial whole-number check.
+- **"Last 4 rounds"** instead of last 5. A round is now counted **every time
+  someone presses New Game** (the board you're leaving is recorded, even an empty
+  one), so the tally can be cleared by pressing New Game a few times.
+- **Rolled-number keys dim** once the equation has consumed that die, so you can
+  see at a glance which dice you've already used.
+- **Layered time bonus:** a correct number adds **+5s** (>2:00 left), **+10s**
+  (>1:30), **+15s** (>1:00), **+20s** (>0:30), or **+25s** (≤0:30). Less time
+  left = more time added.

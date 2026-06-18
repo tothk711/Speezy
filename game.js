@@ -82,7 +82,8 @@ function evalRPN(rpn){
     } else if(t.type==='op'){
       if(t.value==='u-'){ const a=st.pop(); if(a===undefined) throw new Error('Bad expression'); st.push(-a); }
       else if(t.value==='fact'){
-        const a=st.pop(); if(a===undefined) throw new Error('Bad expression');
+        let a=st.pop(); if(a===undefined) throw new Error('Bad expression');
+        const ra=Math.round(a); if(Math.abs(a-ra)<1e-9) a=ra;   // tolerate float dust, e.g. sqrt(5)*sqrt(5)=5.0000001
         if(a<0||!Number.isInteger(a)) throw new Error('Factorial needs a whole number ≥ 0');
         if(a>170) throw new Error('Factorial too large');
         let f=1; for(let k=2;k<=a;k++) f*=k; st.push(f);
@@ -278,7 +279,13 @@ const COLORS=[
   {name:'Teal',  hex:'#2dd4bf'}
 ];
 
-function timeBonus(timeLeft){ return timeLeft > 60 ? 5 : 30; }
+function timeBonus(t){
+  if(t>120) return 5;
+  if(t>90)  return 10;
+  if(t>60)  return 15;
+  if(t>30)  return 20;
+  return 25;            // (0, 30]  — least time left, most added
+}
 
 /* ================= Pure rule helpers ================= */
 function isLocked(pair){ return pair.tiles[0].done && pair.tiles[1].done && pair.tiles[0].color===pair.tiles[1].color; }
@@ -373,7 +380,6 @@ class Game {
     this.ended=true; this.cleared=cleared;
     const map=solveAll(this.avail);
     this.pairs.forEach(p=>p.tiles.forEach(t=>{ if(!t.done) t.cheat=(map[t.val]||[]).slice(0,3); }));
-    this.history.push(computeScores(this.pairs)); if(this.history.length>5) this.history.shift();
     this.onChange();
   }
   boardSettled(){ return this.pairs.every(p=> p.tiles[0].done && p.tiles[1].done && isLocked(p)); }
@@ -436,7 +442,13 @@ class Game {
     delete this.sockets[id];
     this.onChange();
   }
-  forceNew(){ this.startRound(); }
+  forceNew(){
+    // Every New Game press counts the board you're leaving as a round (even an empty one),
+    // so the "last 4 rounds" tally can be cleared by pressing New Game a few times.
+    this.history.push(computeScores(this.pairs));
+    if(this.history.length>4) this.history.shift();
+    this.startRound();
+  }
   forceEnd(){ if(!this.ended) this.endRound(false); }
 
   recentFor(hex){ return this.history.reduce((s,snap)=>s+(snap[hex]||0),0); }
