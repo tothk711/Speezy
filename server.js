@@ -58,6 +58,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 const idx = find('index.html');
 server.listen(PORT, () => {
-  console.log('Speezy 2.23 running on port ' + PORT);
+  console.log('Speezy 2.24 running on port ' + PORT);
   console.log('Serving client from: ' + (idx || 'NOT FOUND — check that index.html is in the repo'));
 });

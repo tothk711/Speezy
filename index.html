@@ -166,6 +166,7 @@
   .cbtn:hover{filter:brightness(1.14)}
   .cbtn.num{font-weight:900;border-color:rgba(56,189,248,.5);background:linear-gradient(145deg,#222a4c,#1a2140)}
   .cbtn.word{font-size:19px}
+  .cbtn.op{font-size:38px;padding:13px 0}  /* +50% glyph, padding trimmed so the cell stays the same size */
   .cempty{border:1px dashed var(--line);border-radius:12px;opacity:.35}
   .calc-total{text-align:right;margin:6px 2px 12px;font-family:"Consolas",monospace;color:var(--muted);font-size:15px}
   .calc-total b{color:var(--text);font-size:22px;font-weight:800}
@@ -273,7 +274,7 @@
             • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s</b> (or <b style="color:var(--green)">+30s</b> when under a minute). Press <b>New Game</b> to start the next round.<br>
             • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:20 (for 10s, re-triggers each time the clock hits 0:20). Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.23 (multiplayer)</b>
+            • Version: <b>Špeezy 2.24 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -470,7 +471,7 @@ function renderCalcGrid(){
   const blank=()=>{ const d=document.createElement('div'); d.className='cempty'; g.appendChild(d); };
   G.avail.forEach(d=>cell(String(d),String(d),'num'));
   for(let i=G.avail.length;i<4;i++) blank();
-  cell('+','+'); cell('−','-'); cell('×','*'); cell('÷','/');
+  cell('+','+','op'); cell('−','-','op'); cell('×','*','op'); cell('/','/','op');
   cell('(','('); cell(')',')'); cell('^','^'); cell('√','sqrt(');
   cell('log','log(','word'); cell('!','!'); blank(); blank();
 }
