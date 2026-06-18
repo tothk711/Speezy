@@ -271,9 +271,9 @@
             • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s (watch the countdown on the tile).<br>
             • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
             • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s</b> (or <b style="color:var(--green)">+30s</b> when under a minute). Press <b>New Game</b> to start the next round.<br>
-            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:20; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15). Each applies on the next board.<br>
+            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:20 (for 10s, re-triggers each time the clock hits 0:20). Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.22 (multiplayer)</b>
+            • Version: <b>Špeezy 2.23 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -296,10 +296,10 @@
         </div>
 
         <div class="mutations">
-          <label class="mut-row" title="Premature crossing off — cross impossible tiles at 0:20 (applies next round)">
+          <label class="mut-row" title="Premature crossing off — cross impossible tiles at 0:30 (applies next round)">
             <input type="checkbox" id="mutPremature"><span class="mutemote">❌</span>
           </label>
-          <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
+          <label class="mut-row" title="Last-minute hints — at 0:20 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
             <input type="checkbox" id="mutHints"><span class="mutemote">💡</span>
           </label>
         </div>
@@ -400,7 +400,7 @@ function onState(st){
   const mp=$('mutPremature'); if(mp && document.activeElement!==mp) mp.checked = !!(st.mutations && st.mutations.prematureCross);
   const mh=$('mutHints'); if(mh && document.activeElement!==mh) mh.checked = !!(st.mutations && st.mutations.lastMinuteHints);
   if(st.ended){ showWin(); hideHint(); $('statsCard').classList.toggle('timeup', !st.cleared); $('statsCard').classList.remove('urgent'); }
-  else { hideWin(); $('statsCard').classList.remove('timeup'); $('statsCard').classList.toggle('urgent', st.timeLeft<=20); }
+  else { hideWin(); $('statsCard').classList.remove('timeup'); $('statsCard').classList.toggle('urgent', st.timeLeft<=30); }
   const sig=boardSig();
   if(sig!==lastBoardSig){ lastBoardSig=sig; renderTargets(); }
   else highlightCursor();
@@ -710,7 +710,7 @@ function check(){
 function updateTimer(){
   const t=Math.max(0,G.timeLeft||0);
   $('timer').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');
-  $('timer').style.color = (t<=20 && !G.ended) ? 'var(--danger)' : '';
+  $('timer').style.color = (t<=30 && !G.ended) ? 'var(--danger)' : '';
 }
 function flashTime(delta){
   const el=$('timer');

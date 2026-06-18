@@ -254,7 +254,7 @@ function solveAll(dice){
 
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
-const ROUND=120, COOLDOWN=15000, CROSS_AT=20, HINT_AT=15;
+const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=20;
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
   [42,21],[50,25],[64,32],[63,21],[32,4],
