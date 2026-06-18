@@ -37,27 +37,33 @@ const game = new Game(
 );
 
 io.on('connection', (socket) => {
-  const color = game.addSocket(socket.id);
-  socket.emit('you', color);
-  socket.emit('state', game.serialize());
-  io.emit('state', game.serialize());
+  const cid = (socket.handshake.auth && socket.handshake.auth.cid)
+           || (socket.handshake.query && socket.handshake.query.cid)
+           || socket.id;
+  try {
+    const color = game.join(socket.id, cid);
+    socket.emit('you', color);
+    socket.emit('state', game.serialize());
+  } catch (e) { console.error('connection error', e); }
 
-  socket.on('pickColor', (hex) => { const c = game.pickColor(socket.id, hex); socket.emit('you', c); });
-  socket.on('setInitials', (m) => game.setInitials(m && m.hex, m && m.text));
-  socket.on('setMutation', (m) => game.setMutation(m && m.key, m && m.on));
+  socket.on('pickColor', (hex) => { try { socket.emit('you', game.pickColor(cid, hex)); } catch (e) { console.error('pickColor', e); } });
+  socket.on('setInitials', (m) => { try { game.setInitials(m && m.hex, m && m.text); } catch (e) { console.error('setInitials', e); } });
+  socket.on('setMutation', (m) => { try { game.setMutation(m && m.key, m && m.on); } catch (e) { console.error('setMutation', e); } });
   socket.on('claim', (msg) => {
-    const color = game.sockets[socket.id];
-    const r = game.claim(color, msg && msg.pi, msg && msg.ti, msg && msg.eq);
-    socket.emit('claimResult', r);
+    try {
+      const r = game.claim(game.colorFor(cid), msg && msg.pi, msg && msg.ti, msg && msg.eq);
+      socket.emit('claimResult', r);
+    } catch (e) { console.error('claim', e); socket.emit('claimResult', { ok:false, message:'\u26a0 Server error \u2014 try again.' }); }
   });
-  socket.on('newGame', () => game.forceNew());
-  socket.on('endRound', () => game.forceEnd());
-  socket.on('disconnect', () => game.removeSocket(socket.id));
+  socket.on('newGame', () => { try { game.forceNew(); } catch (e) { console.error('newGame', e); } });
+  socket.on('endRound', () => { try { game.forceEnd(); } catch (e) { console.error('endRound', e); } });
+  socket.on('sync', () => { try { socket.emit('state', game.serialize()); } catch (e) { console.error('sync', e); } });
+  socket.on('disconnect', () => { try { game.leaveSocket(socket.id); } catch (e) { console.error('disconnect', e); } });
 });
 
 const PORT = process.env.PORT || 3000;
 const idx = find('index.html');
 server.listen(PORT, () => {
-  console.log('Speezy 2.25 running on port ' + PORT);
+  console.log('Speezy 2.4 running on port ' + PORT);
   console.log('Serving client from: ' + (idx || 'NOT FOUND — check that index.html is in the repo'));
 });

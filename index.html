@@ -51,10 +51,10 @@
   .side{flex:1 1 320px;max-width:380px;position:sticky;top:24px}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
-  .stats{display:flex;gap:16px;align-items:center;position:relative;flex-wrap:wrap;margin-bottom:18px;
+  .stats{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;position:relative;margin-bottom:18px;
     transition:background .35s, border-color .35s}
-  .scores-stat{flex:0 1 auto;min-width:0}
-  .timer-stat{flex:1 1 80px}
+  .scores-stat{min-width:0}
+  .timer-stat{justify-self:center}
   .stats.timeup{border-color:rgba(248,113,113,.55);background:rgba(248,113,113,.10)}
   .stats.urgent{border-color:rgba(248,113,113,.7);background:rgba(248,113,113,.13);animation:urgentPulse 1s ease-in-out infinite}
   @keyframes urgentPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0)}50%{box-shadow:0 0 0 3px rgba(248,113,113,.28)}}
@@ -64,7 +64,7 @@
   .score{display:flex;align-items:center;gap:6px}
   .score .dot{width:11px;height:11px;border-radius:50%}
   .scnum{font-size:24px;font-weight:800}
-  .newgame-wrap{flex:0 0 auto;display:flex;gap:8px;margin-left:auto}
+  .newgame-wrap{justify-self:end;display:flex;gap:8px}
   @keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-16px)}}
 
   button{
@@ -272,10 +272,10 @@
             • Solve <b>both</b> halves of a pair in <b>your</b> color to lock it (worth 3). A split pair scores 1 each.<br>
             • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s (watch the countdown on the tile).<br>
             • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
-            • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. Press <b>New Game</b> to start the next round.<br>
-            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:20 (for 10s, re-triggers each time the clock hits 0:20). Each applies on the next board.<br>
+            • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. The round ends early once every solvable number has been taken. Press <b>New Game</b> to start the next round.<br>
+            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15). Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.25 (multiplayer)</b>
+            • Version: <b>Špeezy 2.4 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -301,7 +301,7 @@
           <label class="mut-row" title="Premature crossing off — cross impossible tiles at 0:30 (applies next round)">
             <input type="checkbox" id="mutPremature"><span class="mutemote">❌</span>
           </label>
-          <label class="mut-row" title="Last-minute hints — at 0:20 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
+          <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
             <input type="checkbox" id="mutHints"><span class="mutemote">💡</span>
           </label>
         </div>
@@ -319,7 +319,13 @@
 const { evaluate, usesNumbers, prettyEq, isLocked, stealable, protectedTarget,
         valueCooldownLeft, COLORS, COOLDOWN } = SPEEZY;
 const $=id=>document.getElementById(id);
-const socket = io();
+function makeCid(){
+  try{ let c=sessionStorage.getItem('speezy_cid'); if(!c){ c='c'+Date.now().toString(36)+Math.random().toString(36).slice(2,10); sessionStorage.setItem('speezy_cid',c); } return c; }
+  catch(e){ return 'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,10); }
+}
+const CID = makeCid();
+const socket = io({ auth:{ cid:CID }, reconnection:true, reconnectionDelay:500, reconnectionDelayMax:3000 });
+let lastStateAt = Date.now();
 
 let G=null, myColor=null, selected=null, cursor=null;
 let myClaimLog={}, lastRoundId=-1, lastAvail='', lastBoardSig='', lastAttempt=null;
@@ -355,19 +361,27 @@ function soundTick(){ _tock=!_tock; blip(_tock?210:170,0,0.05,0.06,'sine'); }
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>ac()));
 
 /* ---------- socket ---------- */
-socket.on('connect',()=>{ $('conn').className='conn'; $('conn').innerHTML='<b>● live</b>'; });
-socket.on('disconnect',()=>{ $('conn').className='conn off'; $('conn').innerHTML='<b>● disconnected</b>'; });
-socket.on('you', c=>{ myColor=c; if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
-socket.on('fx', f=>{
+function setConn(){
+  const c=$('conn');
+  if(!socket.connected){ c.className='conn off'; c.innerHTML='<b>● reconnecting…</b>'; return; }
+  c.className='conn';
+  c.innerHTML = myColor ? '<b>● live</b>' : '<b>● live</b> · spectating — pick a color on the left';
+}
+socket.on('connect',()=>{ setConn(); socket.emit('sync'); });   // catch up immediately on (re)connect
+socket.on('disconnect',()=>{ setConn(); });
+// Watchdog: connected but haven't heard from the server in a while -> ask for a fresh state.
+setInterval(()=>{ if(socket.connected && Date.now()-lastStateAt>=8000) socket.emit('sync'); }, 4000);
+socket.on('you', c=>{ myColor=c||null; setConn(); if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
+socket.on('fx', f=>{ try{
   if(!f) return;
   if(f.type==='hint'){ showHint(f.pi,f.ti,f.partial); return; }
   if(f.type!=='claim') return;
   if(f.locked) popPair(f.pi);
   markTaken(f.pi,f.ti);
   if(f.isSteal) soundSteal(); else if(f.locked) soundLock(); else soundTaken();
-});
+}catch(e){ console.error('fx', e); } });
 socket.on('state', onState);
-socket.on('claimResult', r=>{
+socket.on('claimResult', r=>{ try{
   if(!r) return;
   const steal = r.ok && r.message && r.message[0]==='🏴';
   setMsg(r.message, r.ok ? (steal?'steal':'ok') : 'bad');
@@ -376,9 +390,11 @@ socket.on('claimResult', r=>{
     selected=null; $('equation').value=''; updatePreview(); refreshSolver();
     lastBoardSig=''; renderTargets();
   }
-});
+}catch(e){ console.error('claimResult', e); } });
 
 function onState(st){
+  lastStateAt=Date.now();
+  try{
   const now=Date.now();
   st.pairs.forEach(p=>p.tiles.forEach(t=>{ if(t.done && t.age!=null) t.claimAt = now - t.age; }));
   const newRound = st.roundId!==lastRoundId;
@@ -408,6 +424,7 @@ function onState(st){
   else highlightCursor();
   updateCountdowns();
   refreshSolver();
+  }catch(e){ console.error('onState', e); }
 }
 
 /* ---------- roster (left): built once, updated in place so inputs keep focus ---------- */
@@ -543,7 +560,11 @@ function renderWinScores(){
     el.appendChild(d);
   });
 }
-function showWin(){ $('winTitle').textContent=G.cleared?'🏆 Board locked!':"⏱ Time's up!"; renderWinScores(); $('win').classList.add('show'); }
+function showWin(){
+  const titles={ time:"⏱ Time's up!", locked:'🏆 Board locked!', settled:'🏁 Nothing left to solve!', ended:'🏁 Round ended' };
+  $('winTitle').textContent = titles[G.endReason] || (G.cleared?'🏆 Board locked!':"⏱ Time's up!");
+  renderWinScores(); $('win').classList.add('show');
+}
 function hideWin(){ $('win').classList.remove('show'); }
 
 /* ---------- targets ---------- */
@@ -575,8 +596,9 @@ function boardSig(){
 }
 function renderTargets(){
   if(!G) return;
+  try{
   $('tip').classList.remove('show','cheat');
-  const g=$('targets'); g.innerHTML=''; const now=Date.now();
+  const g=$('targets'); const frag=document.createDocumentFragment(); const now=Date.now();
   G.pairs.forEach((p,pi)=>{
     const locked=isLocked(p);
     const col = locked ? (p.color||p.tiles[0].color) : null;
@@ -625,11 +647,13 @@ function renderTargets(){
       card.appendChild(d);
     });
     if(locked){ const b=document.createElement('div'); b.className='lockbadge'; b.textContent='🔒'; b.style.background=col; card.appendChild(b); }
-    g.appendChild(card);
+    frag.appendChild(card);
   });
+  g.replaceChildren(frag);
   if(cursor && !clientCanSelect(cursor.p,cursor.i)) cursor=null;
   highlightCursor();
   if(hintTile) positionHint();
+  }catch(e){ console.error('renderTargets', e); }
 }
 function updateCountdowns(){
   if(!G||G.ended) return;

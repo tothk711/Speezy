@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v2.25)
+# Špeezy — Multiplayer (v2.4)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -18,15 +18,20 @@ Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
 
-## What's new in 2.25
-- **Factorial bug fixed.** Expressions like `(sqrt(5)*sqrt(5))!/4` now work —
-  floating-point dust (e.g. 5.0000000001) is snapped to the nearest integer
-  before the factorial whole-number check.
-- **"Last 4 rounds"** instead of last 5. A round is now counted **every time
-  someone presses New Game** (the board you're leaving is recorded, even an empty
-  one), so the tally can be cleared by pressing New Game a few times.
-- **Rolled-number keys dim** once the equation has consumed that die, so you can
-  see at a glance which dice you've already used.
-- **Layered time bonus:** a correct number adds **+5s** (>2:00 left), **+10s**
-  (>1:30), **+15s** (>1:00), **+20s** (>0:30), or **+25s** (≤0:30). Less time
-  left = more time added.
+## What's new in 2.4
+- **Timer recentred.** The clock now sits dead-centre of the stats bar (directly
+  above the middle die) using a 1fr / auto / 1fr grid, so it no longer drifts
+  sideways as players' scores change.
+- **Multiplayer stability fix.** Players now have a stable identity, so a brief
+  network drop no longer leaves them with a dead, unclickable board:
+  - Each browser tab gets a persistent **client id**; the server keys colors to
+    that id (not the socket), so a reconnect **reclaims the same color** even if
+    the old connection hasn't timed out yet. A short **grace period** holds the
+    color for a quick return.
+  - **Auto-resync watchdog:** if a client stops hearing from the server it asks
+    for a fresh state (and on every reconnect), so a missed update self-heals.
+  - **Crash-proof board:** the grid is rebuilt off-screen and swapped in atomically,
+    and all socket/render handlers are wrapped — a transient error can't wipe the
+    board. Colorless clients now show a clear **"spectating"** hint.
+  - Server-side handlers are wrapped in error handling so one bad action can't
+    wedge a connection.
