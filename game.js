@@ -354,7 +354,7 @@ class Game {
       if(Math.random()<0.5) tiles.reverse();
       return {tiles, color:null};
     });
-    this.timeLeft=ROUND; this.ended=false; this.cleared=false; this.endReason=null; this._sm=null; this.claimLog={};
+    this.timeLeft=ROUND; this.ended=false; this.cleared=false; this.endReason=null; this._sm=null; this.claimLog={}; this.roundStart=Date.now();
     this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
     this.bountyPair = -1;
@@ -517,6 +517,7 @@ class Game {
     return {
       roundId:this.roundId,
       ended:this.ended, cleared:this.cleared, endReason:this.endReason||null,
+      bountyPulse: !this.ended && this.bountyPair>=0 && ((Date.now()-(this.roundStart||0)) < 20000),
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({

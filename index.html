@@ -226,8 +226,9 @@
   /* ===== Bounty mutator (gold pair + announcement bubble) ===== */
   .pair.bounty{ background:rgba(255,210,63,.06); }
   .bounty-ring{ position:absolute; inset:-3px; border-radius:18px; border:3px solid var(--gold);
-    box-shadow:0 0 16px rgba(255,210,63,.55), inset 0 0 9px rgba(255,210,63,.25);
-    pointer-events:none; z-index:6; animation:bountyPulse 1.5s ease-in-out infinite; }
+    box-shadow:0 0 14px rgba(255,210,63,.5), inset 0 0 8px rgba(255,210,63,.22);
+    pointer-events:none; z-index:6; }
+  .bounty-ring.pulse{ animation:bountyPulse 1.5s ease-in-out infinite; }
   @keyframes bountyPulse{
     0%,100%{ box-shadow:0 0 11px rgba(255,210,63,.42), inset 0 0 7px rgba(255,210,63,.18); }
     50%{ box-shadow:0 0 26px rgba(255,210,63,.85), inset 0 0 14px rgba(255,210,63,.4); } }
@@ -376,7 +377,7 @@
             • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. The round ends early once every solvable number has been taken. Press <b>New Game</b> to start the next round.<br>
             • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15); 💰 marks one fully-solvable pair as a gold <b>bounty</b> worth 2 per tile and 5 for locking the pair. Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.63 (multiplayer)</b>
+            • Version: <b>Špeezy 2.64 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -692,7 +693,7 @@ function clientCanSelect(pi,ti){
 function boardSig(){
   if(!G) return '';
   const now=Date.now();
-  return (myColor||'')+'|'+(G.ended?'E':'')+'|'+G.pairs.map((p,pi)=>p.tiles.map((t,ti)=>{
+  return (myColor||'')+'|'+(G.ended?'E':'')+(G.bountyPulse?'P':'')+'|'+G.pairs.map((p,pi)=>p.tiles.map((t,ti)=>{
     let s=t.val+(t.done?('d'+(t.color||'')):'o');
     if(t.crossed) s+='K';
     if(recentTakes[pi+'_'+ti]) s+='T';
@@ -756,7 +757,7 @@ function renderTargets(){
       card.appendChild(d);
     });
     if(locked){ const b=document.createElement('div'); b.className='lockbadge'; b.textContent='🔒'; b.style.background=col; card.appendChild(b); }
-    if(p.bounty){ card.classList.add('bounty'); const ring=document.createElement('div'); ring.className='bounty-ring'; card.appendChild(ring); const bdg=document.createElement('div'); bdg.className='bounty-badge'; bdg.textContent='💰'; card.appendChild(bdg); }
+    if(p.bounty){ card.classList.add('bounty'); if(!locked){ const ring=document.createElement('div'); ring.className='bounty-ring'+(G.bountyPulse?' pulse':''); card.appendChild(ring); } const bdg=document.createElement('div'); bdg.className='bounty-badge'; bdg.textContent='💰'; card.appendChild(bdg); }
     frag.appendChild(card);
   });
   g.replaceChildren(frag);

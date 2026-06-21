@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v2.63)
+# Špeezy — Multiplayer (v2.64)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,12 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 2.64 (bounty polish)
+- The 💰 bounty ring now **pulses only for the first 20 seconds** of a round, then
+  settles to a steady gold border + badge.
+- Once the bounty pair is **locked**, the gold ring is dropped entirely — it looks
+  like a normal locked pair, just with the 💰 badge in the top-left corner.
 
 ## What's new in 2.63
 - **Fixed the 💰 Bounty toggle.** Its checkbox was never wired to the server, so
