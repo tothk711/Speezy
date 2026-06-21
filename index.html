@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#0f1224; --panel:#181c34; --panel2:#1f2442;
-    --green:#4ade80; --yellow:#fbbf24; --accent2:#38bdf8;
+    --green:#4ade80; --yellow:#fbbf24; --accent2:#38bdf8; --gold:#ffd23f;
     --salmon:#ff8a73;
     --text:#e8ebff; --muted:#8b91b8; --danger:#f87171;
     --line:#2a2f52;
@@ -223,6 +223,28 @@
   .winscore .dot{width:14px;height:14px;border-radius:50%}
   .win .note{color:var(--muted);font-size:13px;margin-bottom:14px}
 
+  /* ===== Bounty mutator (gold pair + announcement bubble) ===== */
+  .pair.bounty{ background:rgba(255,210,63,.06); }
+  .bounty-ring{ position:absolute; inset:-3px; border-radius:18px; border:3px solid var(--gold);
+    box-shadow:0 0 16px rgba(255,210,63,.55), inset 0 0 9px rgba(255,210,63,.25);
+    pointer-events:none; z-index:6; animation:bountyPulse 1.5s ease-in-out infinite; }
+  @keyframes bountyPulse{
+    0%,100%{ box-shadow:0 0 11px rgba(255,210,63,.42), inset 0 0 7px rgba(255,210,63,.18); }
+    50%{ box-shadow:0 0 26px rgba(255,210,63,.85), inset 0 0 14px rgba(255,210,63,.4); } }
+  .bounty-badge{ position:absolute; top:-12px; left:8px; width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+    background:var(--gold); border:2px solid var(--panel); box-shadow:0 3px 10px rgba(0,0,0,.5); z-index:7; }
+  #bounty{ position:fixed; pointer-events:none; z-index:62; left:0; top:0; transform:translate(-50%,-100%);
+    background:linear-gradient(135deg,#ffe07a,#ffb627); color:#5a3a00; font-weight:900; font-size:18px;
+    padding:9px 16px; border-radius:14px; white-space:nowrap; opacity:0; transition:opacity .3s ease;
+    box-shadow:0 12px 30px rgba(255,170,40,.55), inset 0 0 0 2px rgba(255,255,255,.4); }
+  #bounty::after{ content:""; position:absolute; left:50%; bottom:-9px; transform:translateX(-50%);
+    border-left:10px solid transparent; border-right:10px solid transparent; border-top:10px solid #ffb627; }
+  #bounty.show{ opacity:1; animation:bountyPop .5s cubic-bezier(.2,1.5,.4,1) both, bountyFloat 1.5s ease-in-out .5s infinite; }
+  @keyframes bountyPop{ 0%{ transform:translate(-50%,-100%) scale(.4);} 60%{ transform:translate(-50%,-100%) scale(1.12);} 100%{ transform:translate(-50%,-100%) scale(1);} }
+  @keyframes bountyFloat{ 0%,100%{ transform:translate(-50%,-100%) translateY(0);} 50%{ transform:translate(-50%,-100%) translateY(-5px);} }
+  body.mobile #bounty{ font-size:15px; padding:7px 13px; }
+  body.mobile .bounty-badge{ width:20px; height:20px; font-size:12px; top:-9px; left:5px; }
   /* ===== Mobile layout (toggled by the button, top-right) ===== */
   body.mobile{ padding:8px; }
   body.mobile .wrap{ max-width:100%; }
@@ -233,7 +255,9 @@
 
   /* flatten the nested columns into one stack, then sequence the pieces */
   body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-top:6px; }
-  body.mobile .layout, body.mobile .main, body.mobile .side{ display:contents; }
+  body.mobile .layout{ display:flex; flex-direction:column; align-items:stretch; gap:10px; width:100%; min-width:0; flex:0 0 auto; order:1; }
+  body.mobile .main, body.mobile .side{ display:contents; }
+  body.mobile .side{ position:static; top:auto; max-width:none; }   /* never let the calculator float over the board */
   body.mobile #statsCard{ order:10; }
   body.mobile #win{ order:15; }
   body.mobile #diceCard{ order:20; margin-bottom:0 !important; }
@@ -252,7 +276,7 @@
   body.mobile .newgame-wrap button{ padding:7px 9px; font-size:12px; border-radius:8px; }
 
   body.mobile .dice-row{ gap:9px; }
-  body.mobile .dice-emoji{ display:none; }      /* the calculator already shows the rolled numbers */
+  body.mobile .dice-emoji{ font-size:30px; }
   body.mobile .die{ width:42px; height:42px; font-size:19px; border-radius:9px; box-shadow:0 3px 9px rgba(0,0,0,.3); }
 
   body.mobile .grid{ grid-template-columns:repeat(3,1fr); gap:7px; margin-top:0; }
@@ -354,9 +378,9 @@
             • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s (watch the countdown on the tile).<br>
             • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
             • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. The round ends early once every solvable number has been taken. Press <b>New Game</b> to start the next round.<br>
-            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15). Each applies on the next board.<br>
+            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15); 💰 marks one fully-solvable pair as a gold <b>bounty</b> worth 2 per tile and 5 for locking the pair. Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.5 (multiplayer)</b>
+            • Version: <b>Špeezy 2.61 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -385,6 +409,9 @@
           <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
             <input type="checkbox" id="mutHints"><span class="mutemote">💡</span>
           </label>
+          <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 5 (applies next round)">
+            <input type="checkbox" id="mutBounty"><span class="mutemote">💰</span>
+          </label>
         </div>
       </aside>
     </div>
@@ -393,6 +420,7 @@
 
 <div id="tip"></div>
 <div id="hint"></div>
+<div id="bounty"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/game.js"></script>
@@ -439,6 +467,7 @@ function soundLock(){ blip(392,0,0.13,0.09,'sine'); blip(523,0.09,0.16,0.09,'sin
 function soundSteal(){ blip(523,0,0.10,0.09,'sine'); blip(392,0.07,0.14,0.09,'sine'); blip(165,0.11,0.22,0.08,'triangle'); }
 function soundHint(){ blip(587,0,0.10,0.06,'sine'); blip(784,0.08,0.16,0.06,'sine'); }
 function soundTick(){ _tock=!_tock; blip(_tock?210:170,0,0.05,0.06,'sine'); }
+function soundBounty(){ blip(523,0,0.12,0.07,'sine'); blip(659,0.10,0.14,0.07,'sine'); blip(784,0.22,0.18,0.07,'sine'); blip(1047,0.34,0.26,0.06,'sine'); }
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>ac()));
 
 /* ---------- socket ---------- */
@@ -455,11 +484,12 @@ setInterval(()=>{ if(socket.connected && Date.now()-lastStateAt>=8000) socket.em
 socket.on('you', c=>{ myColor=c||null; setConn(); if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
 socket.on('fx', f=>{ try{
   if(!f) return;
+  if(f.type==='bounty'){ showBounty(f.pi); return; }
   if(f.type==='hint'){ showHint(f.pi,f.ti,f.partial); return; }
   if(f.type!=='claim') return;
   if(f.locked) popPair(f.pi);
   markTaken(f.pi,f.ti);
-  if(f.isSteal) soundSteal(); else if(f.locked) soundLock(); else soundTaken();
+  if(f.locked && f.bounty) soundBounty(); else if(f.isSteal) soundSteal(); else if(f.locked) soundLock(); else soundTaken();
 }catch(e){ console.error('fx', e); } });
 socket.on('state', onState);
 socket.on('claimResult', r=>{ try{
@@ -486,7 +516,7 @@ function onState(st){
     setMsg('',''); $('equation').value=''; updatePreview();
     $('statsCard').classList.remove('timeup','urgent');
     $('tip').classList.remove('show','cheat');
-    hideHint();
+    hideHint(); hideBounty();
   }
   renderDice();
   updateTimer();
@@ -498,6 +528,7 @@ function onState(st){
   renderPalette();
   const mp=$('mutPremature'); if(mp && document.activeElement!==mp) mp.checked = !!(st.mutations && st.mutations.prematureCross);
   const mh=$('mutHints'); if(mh && document.activeElement!==mh) mh.checked = !!(st.mutations && st.mutations.lastMinuteHints);
+  const mb=$('mutBounty'); if(mb && document.activeElement!==mb) mb.checked = !!(st.mutations && st.mutations.bounty);
   if(st.ended){ showWin(); hideHint(); $('statsCard').classList.toggle('timeup', !st.cleared); $('statsCard').classList.remove('urgent'); }
   else { hideWin(); $('statsCard').classList.remove('timeup'); $('statsCard').classList.toggle('urgent', st.timeLeft<=30); }
   const sig=boardSig();
@@ -729,12 +760,14 @@ function renderTargets(){
       card.appendChild(d);
     });
     if(locked){ const b=document.createElement('div'); b.className='lockbadge'; b.textContent='🔒'; b.style.background=col; card.appendChild(b); }
+    if(p.bounty){ card.classList.add('bounty'); const ring=document.createElement('div'); ring.className='bounty-ring'; card.appendChild(ring); const bdg=document.createElement('div'); bdg.className='bounty-badge'; bdg.textContent='💰'; card.appendChild(bdg); }
     frag.appendChild(card);
   });
   g.replaceChildren(frag);
   if(cursor && !clientCanSelect(cursor.p,cursor.i)) cursor=null;
   highlightCursor();
   if(hintTile) positionHint();
+  if(bountyPi>=0) positionBounty();
   }catch(e){ console.error('renderTargets', e); }
 }
 function updateCountdowns(){
@@ -774,8 +807,28 @@ function showHint(pi,ti,partial){
   clearTimeout(hintTimer);
   hintTimer=setTimeout(hideHint,10000);
 }
-window.addEventListener('scroll',()=>{ if(hintTile) positionHint(); },{passive:true});
-window.addEventListener('resize',()=>{ if(hintTile) positionHint(); });
+window.addEventListener('scroll',()=>{ if(hintTile) positionHint(); if(bountyPi>=0) positionBounty(); },{passive:true});
+window.addEventListener('resize',()=>{ if(hintTile) positionHint(); if(bountyPi>=0) positionBounty(); });
+
+/* ---------- bounty announcement bubble ---------- */
+let bountyTimer=null, bountyPi=-1;
+function positionBounty(){
+  const bb=$('bounty'); if(bountyPi<0) return;
+  const card=$('targets').children[bountyPi];
+  if(!card){ bb.classList.remove('show'); return; }
+  const r=card.getBoundingClientRect();
+  bb.style.left=(r.left+r.width/2)+'px';
+  bb.style.top=(r.top-10)+'px';
+}
+function hideBounty(){ bountyPi=-1; clearTimeout(bountyTimer); $('bounty').classList.remove('show'); }
+function showBounty(pi){
+  if(!G||G.ended) return;
+  bountyPi=pi; const bb=$('bounty'); bb.textContent='💰 Bounty!';
+  positionBounty();
+  bb.classList.remove('show'); void bb.offsetWidth; bb.classList.add('show');   // restart the pop
+  soundBounty();
+  clearTimeout(bountyTimer); bountyTimer=setTimeout(hideBounty, 4500);
+}
 
 /* ---------- tooltips ---------- */
 function posTip(e){ const tp=$('tip'); tp.style.left=Math.min(e.clientX+16, window.innerWidth-tp.offsetWidth-12)+'px'; tp.style.top=(e.clientY+18)+'px'; }

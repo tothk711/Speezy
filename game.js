@@ -311,7 +311,7 @@ function valueCooldownLeft(claimLog,color,value,now){
 function computeScores(pairs){
   const m={};
   pairs.forEach(p=>{
-    p.tiles.forEach(t=>{ if(t.done && t.color){ m[t.color]=(m[t.color]||0)+1; } });
+    p.tiles.forEach(t=>{ if(t.done && t.color){ m[t.color]=(m[t.color]||0)+(t.bounty?2:1); } });
     if(p.tiles[0].done && p.tiles[1].done && p.tiles[0].color===p.tiles[1].color){
       const c=p.tiles[0].color; m[c]=(m[c]||0)+1;
     }
@@ -339,8 +339,8 @@ class Game {
     this.seatGrace = SEAT_GRACE;
     this.initials = {};
     this.history = [];
-    this.mutationsPending = { prematureCross:false, lastMinuteHints:false };
-    this.mutationsActive  = { prematureCross:false, lastMinuteHints:false };
+    this.mutationsPending = { prematureCross:false, lastMinuteHints:false, bounty:false };
+    this.mutationsActive  = { prematureCross:false, lastMinuteHints:false, bounty:false };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>{ try{ this.tick(); }catch(e){ console.error('tick error', e); } }, 1000);
@@ -357,8 +357,20 @@ class Game {
     this.timeLeft=ROUND; this.ended=false; this.cleared=false; this.endReason=null; this._sm=null; this.claimLog={};
     this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
+    this.bountyPair = -1;
+    if(this.mutationsActive.bounty){
+      const map=this._solveMap();
+      const cands=[];
+      this.pairs.forEach((p,i)=>{ if(map[p.tiles[0].val]&&map[p.tiles[0].val].length && map[p.tiles[1].val]&&map[p.tiles[1].val].length) cands.push(i); });
+      if(cands.length){
+        const bi=cands[Math.floor(Math.random()*cands.length)];
+        this.bountyPair=bi; this.pairs[bi].bounty=true;
+        this.pairs[bi].tiles[0].bounty=true; this.pairs[bi].tiles[1].bounty=true;
+      }
+    }
     this.roundId++;
     this.onChange();
+    if(this.bountyPair>=0) this.onFx({type:'bounty', pi:this.bountyPair});
   }
   tick(){
     if(this.ended) return;
@@ -429,7 +441,7 @@ class Game {
               : locked ? '🔒 Pair locked! (worth 3 pts)'
               : both   ? '✓ Correct! +1  (split pair)'
               : '✓ Correct! +1 — lock it by taking its partner in your color.';
-    this.onFx({type:'claim', color, pi, ti, locked, isSteal});
+    this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty});
     if(this.boardSettled()) this.endRound('locked');
     else if(this.roundDecided()) this.endRound('settled');
     this.onChange();
@@ -508,7 +520,7 @@ class Game {
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({
-        color:p.color||null,
+        color:p.color||null, bounty:!!p.bounty,
         tiles:p.tiles.map(t=>({
           val:t.val, done:!!t.done, color:t.color||null,
           age: t.done ? (now-(t.claimAt||now)) : null,
