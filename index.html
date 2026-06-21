@@ -369,15 +369,14 @@
         <div class="rules">
           <button class="rules-toggle" id="rulesToggle"><span class="chev">▸</span> How it works</button>
           <div class="rules-body" id="rulesBody" hidden>
-            • Everyone who opens this link joins the <b>same</b> live game. Grab a free color circle (left) and type initials in any box.<br>
-            • Pick a number (click, or move with <kbd>← ↑ → ↓</kbd>) and build an equation using all 3 dice in the calculator.<br>
-            • Solve <b>both</b> halves of a pair in <b>your</b> color to lock it (worth 3). A split pair scores 1 each.<br>
-            • <b>Steal:</b> if a pair is split, whoever owns one half can steal the other. A freshly claimed number is protected for 15s (watch the countdown on the tile).<br>
-            • <b>Cooldown:</b> after you claim a value, you can't claim the same value again for 15s.<br>
-            • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. The round ends early once every solvable number has been taken. Press <b>New Game</b> to start the next round.<br>
-            • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15); 💰 marks one fully-solvable pair as a gold <b>bounty</b> worth 2 per tile and 5 for locking the pair. Each applies on the next board.<br>
+            • Pick a number and build an equation using all 3 rolled dice.<br>
+            • Solve <b>both</b> halves of a pair to lock them and get 1 extra point.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.64 (multiplayer)</b>
+            • If a pair is split, whoever owns one half can steal the other.<br>
+            • After you claim a value, you can't claim the same value again for 15s.<br>
+            • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
+            • <b>Mutations</b> ❌ crosses impossible tiles at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 5 for locking the pair.<br>
+            • Version: <b>Špeezy 2.65</b>
           </div>
         </div>
       </div>
@@ -401,13 +400,13 @@
 
         <div class="mutations">
           <label class="mut-row" title="Premature crossing off — cross impossible tiles at 0:30 (applies next round)">
-            <input type="checkbox" id="mutPremature"><span class="mutemote">❌</span>
+            <input type="checkbox" id="mutPremature" checked><span class="mutemote">❌</span>
           </label>
           <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
-            <input type="checkbox" id="mutHints"><span class="mutemote">💡</span>
+            <input type="checkbox" id="mutHints" checked><span class="mutemote">💡</span>
           </label>
           <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 5 (applies next round)">
-            <input type="checkbox" id="mutBounty"><span class="mutemote">💰</span>
+            <input type="checkbox" id="mutBounty" checked><span class="mutemote">💰</span>
           </label>
         </div>
       </aside>

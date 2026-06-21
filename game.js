@@ -339,8 +339,8 @@ class Game {
     this.seatGrace = SEAT_GRACE;
     this.initials = {};
     this.history = [];
-    this.mutationsPending = { prematureCross:false, lastMinuteHints:false, bounty:false };
-    this.mutationsActive  = { prematureCross:false, lastMinuteHints:false, bounty:false };
+    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true };
+    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>{ try{ this.tick(); }catch(e){ console.error('tick error', e); } }, 1000);
