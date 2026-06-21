@@ -256,16 +256,12 @@
   /* flatten the nested columns into one stack, then sequence the pieces */
   body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-top:6px; }
   body.mobile .layout{ display:flex; flex-direction:column; align-items:stretch; gap:10px; width:100%; min-width:0; flex:0 0 auto; order:1; }
-  body.mobile .main, body.mobile .side{ display:contents; }
-  body.mobile .side{ position:static; top:auto; max-width:none; }   /* never let the calculator float over the board */
-  body.mobile #statsCard{ order:10; }
-  body.mobile #win{ order:15; }
-  body.mobile #diceCard{ order:20; margin-bottom:0 !important; }
-  body.mobile #targets{ order:30; }
-  body.mobile #solver{ order:40; }
-  body.mobile .mutations{ order:50; }
-  body.mobile .roster{ order:60; }     /* B: colors + last-4-round points to the bottom */
-  body.mobile .rules{ order:70; }
+  body.mobile .main{ display:block; width:100%; min-width:0; flex:0 0 auto; position:static; }
+  body.mobile .side{ display:block; width:100%; min-width:0; max-width:none; flex:0 0 auto; position:static; top:auto; }
+  body.mobile #solver{ position:static; }
+  body.mobile #diceCard{ margin-bottom:0 !important; }
+  body.mobile .roster{ order:2; }      /* B: colors + last-4-round points near the bottom */
+  body.mobile .rules{ order:3; }       /* 'How it works' relocated below the board column (see setLayout) */
 
   body.mobile .card{ padding:9px; border-radius:11px; }
   body.mobile .stats{ gap:8px; margin-bottom:0; padding:8px; }
@@ -304,7 +300,7 @@
   body.mobile .calc-actions button{ padding:9px 0; font-size:13px; }
   body.mobile .msg{ font-size:12px; margin-top:6px; min-height:16px; }
 
-  body.mobile .mutations{ padding:7px 12px; gap:18px; margin-top:0; }
+  body.mobile .mutations{ display:flex; justify-content:center; padding:7px 12px; gap:18px; margin-top:0; }
   body.mobile .mutemote{ font-size:19px; }
   body.mobile .mut-row input{ width:16px; height:16px; }
 
@@ -380,7 +376,7 @@
             • Round = 2:00. A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added. The round ends early once every solvable number has been taken. Press <b>New Game</b> to start the next round.<br>
             • <b>Mutations</b> (under the calculator): ❌ crosses impossible tiles early, at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15 (for 10s, re-triggers each time the clock hits 0:15); 💰 marks one fully-solvable pair as a gold <b>bounty</b> worth 2 per tile and 5 for locking the pair. Each applies on the next board.<br>
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
-            • Version: <b>Špeezy 2.61 (multiplayer)</b>
+            • Version: <b>Špeezy 2.63 (multiplayer)</b>
           </div>
         </div>
       </div>
@@ -922,6 +918,7 @@ $('backBtn').onclick=backspace;
 $('checkBtn').onclick=check;
 $('mutPremature').onchange=()=>socket.emit('setMutation',{key:'prematureCross',on:$('mutPremature').checked});
 $('mutHints').onchange=()=>socket.emit('setMutation',{key:'lastMinuteHints',on:$('mutHints').checked});
+$('mutBounty').onchange=()=>socket.emit('setMutation',{key:'bounty',on:$('mutBounty').checked});
 $('rulesToggle').onclick=()=>{
   const b=$('rulesBody'); const show=b.hasAttribute('hidden');
   if(show) b.removeAttribute('hidden'); else b.setAttribute('hidden','');
@@ -947,6 +944,8 @@ function applyEquationMode(){
 }
 function setLayout(mobile){
   document.body.classList.toggle('mobile', !!mobile);
+  const _rl=document.querySelector('.rules'), _stg=document.querySelector('.stage'), _mn=document.querySelector('.main');
+  if(_rl){ if(mobile && _stg) _stg.appendChild(_rl); else if(!mobile && _mn) _mn.appendChild(_rl); }
   const b=$('layoutToggle'); if(b) b.textContent = mobile ? '🖥️ Desktop layout' : '📱 Mobile layout';
   applyEquationMode();
   if(mobile){ const eq=$('equation'); if(eq) eq.blur(); }

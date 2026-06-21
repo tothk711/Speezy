@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v2.61)
+# Špeezy — Multiplayer (v2.63)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,20 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 2.63
+- **Fixed the 💰 Bounty toggle.** Its checkbox was never wired to the server, so
+  ticking it did nothing and it reverted on the next update (and New Game). Now it
+  actually enables the bounty for the next round, like the other two mutators.
+
+## What's new in 2.62 (mobile overlap, really fixed)
+- The phone layout no longer uses `display:contents` (which iOS Safari wasn't
+  laying out reliably). It's now a plain flex column — the calculator simply
+  stacks **below** the whole board and cannot overlap it.
+- "How it works" is relocated to the very bottom on mobile so the calculator sits
+  directly under the numbers.
+- NOTE: if the board still looks wrong after deploying, the live site is probably
+  a stale build — confirm Railway redeployed (auto-deploy ON) and hard-refresh.
 
 ## What's new in 2.61 (mobile layout fixes)
 - **Fixed the calculator overlapping the board.** The phone layout now stacks in a
