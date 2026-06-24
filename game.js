@@ -19,7 +19,7 @@ function tokenize(expr){
       tokens.push({type:'num',value:parseFloat(n),raw:n});
     } else if(/[a-zA-Z]/.test(c)){
       let name=''; while(i<expr.length && /[a-zA-Z]/.test(expr[i])){ name+=expr[i]; i++; }
-      if(name==='sqrt') tokens.push({type:'func',value:'sqrt'});
+      if(name==='sqrt'||name==='s') tokens.push({type:'func',value:'sqrt'});
       else if(name==='log'||name==='l') tokens.push({type:'func',value:'log'});
       else throw new Error('Unknown word "'+name+'"');
     } else if('+-*/^()!'.includes(c)){
@@ -131,7 +131,7 @@ function usesNumbers(litStrs, availNums){
   }
   return rec(litStrs.slice(), pieces);
 }
-function prettyEq(s){ return s.replace(/l(?![a-zA-Z])/g,'log').replace(/sqrt/g,'√').replace(/\*/g,'×').replace(/\//g,'÷'); }
+function prettyEq(s){ return s.replace(/l(?![a-zA-Z])/g,'log').replace(/sqrt/g,'√').replace(/s(?![a-zA-Z])/g,'√').replace(/\*/g,'×').replace(/\//g,'÷'); }
 
 /* ================= Computer solver ================= */
 let _budget=0;

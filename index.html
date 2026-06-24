@@ -255,7 +255,7 @@
   body.mobile .layout-toggle{ top:0; padding:5px 9px; font-size:11px; }
 
   /* flatten the nested columns into one stack, then sequence the pieces */
-  body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-top:6px; }
+  body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-top:4px; }
   body.mobile .layout{ display:flex; flex-direction:column; align-items:stretch; gap:10px; width:100%; min-width:0; flex:0 0 auto; order:1; }
   body.mobile .main{ display:block; width:100%; min-width:0; flex:0 0 auto; position:static; }
   body.mobile .side{ display:block; width:100%; min-width:0; max-width:none; flex:0 0 auto; position:static; top:auto; }
@@ -264,7 +264,7 @@
   body.mobile .roster{ order:2; }      /* B: colors + last-4-round points near the bottom */
   body.mobile .rules{ order:3; }       /* 'How it works' relocated below the board column (see setLayout) */
 
-  body.mobile .card{ padding:9px; border-radius:11px; }
+  body.mobile .card{ padding:8px; border-radius:11px; }
   body.mobile .stats{ gap:8px; margin-bottom:0; padding:8px; }
   body.mobile .stat b{ font-size:19px; }
   body.mobile .scores{ gap:10px; min-height:24px; }
@@ -274,10 +274,10 @@
 
   body.mobile .dice-row{ gap:9px; }
   body.mobile .dice-emoji{ font-size:30px; }
-  body.mobile .die{ width:42px; height:42px; font-size:19px; border-radius:9px; box-shadow:0 3px 9px rgba(0,0,0,.3); }
+  body.mobile .die{ width:38px; height:38px; font-size:17px; border-radius:8px; box-shadow:0 3px 9px rgba(0,0,0,.3); }
 
   body.mobile .grid{ grid-template-columns:repeat(3,1fr); gap:7px; margin-top:0; }
-  body.mobile .pair{ padding:5px; gap:5px; border-radius:11px; }
+  body.mobile .pair{ padding:4px; gap:4px; border-radius:11px; }
   body.mobile .target{ font-size:17px; border-radius:9px; }
   body.mobile .target .tick{ font-size:12px; top:1px; right:3px; }
   body.mobile .target .shield{ font-size:11px; top:1px; left:2px; }
@@ -285,23 +285,23 @@
   body.mobile .target .protcount{ font-size:10px; padding:0 4px; line-height:1.5; }
   body.mobile .lockbadge{ width:20px; height:20px; font-size:11px; top:-9px; }
 
-  body.mobile .solver{ padding:11px; }
-  body.mobile .calc-head{ margin-bottom:8px; }
+  body.mobile .solver{ padding:9px; }
+  body.mobile .calc-head{ margin-bottom:4px; }
   body.mobile .calc-sub{ font-size:10px; letter-spacing:1px; }
   body.mobile .bigtarget{ font-size:28px; }
-  body.mobile #equation{ padding:9px 11px; font-size:16px; border-radius:10px; }
-  body.mobile .calcgrid{ gap:6px; margin:8px 0 4px; }
-  body.mobile .cbtn{ padding:9px 0; font-size:16px; border-radius:9px; }
+  body.mobile #equation{ padding:7px 11px; font-size:16px; border-radius:10px; }
+  body.mobile .calcgrid{ gap:5px; margin:5px 0 2px; }
+  body.mobile .cbtn{ padding:6px 0; font-size:16px; border-radius:9px; }
   body.mobile .cbtn.num{ font-size:17px; }
   body.mobile .cbtn.word{ font-size:12px; }
-  body.mobile .cbtn.op{ font-size:21px; padding:6px 0; }
-  body.mobile .calc-total{ font-size:12px; margin:4px 2px 7px; }
+  body.mobile .cbtn.op{ font-size:21px; padding:4px 0; }
+  body.mobile .calc-total{ font-size:12px; margin:2px 2px 4px; }
   body.mobile .calc-total b{ font-size:17px; }
-  body.mobile .calc-actions{ gap:6px; }
-  body.mobile .calc-actions button{ padding:9px 0; font-size:13px; }
-  body.mobile .msg{ font-size:12px; margin-top:6px; min-height:16px; }
+  body.mobile .calc-actions{ gap:5px; }
+  body.mobile .calc-actions button{ padding:6px 0; font-size:13px; }
+  body.mobile .msg{ font-size:12px; margin-top:3px; min-height:0; }
 
-  body.mobile .mutations{ display:flex; justify-content:center; padding:7px 12px; gap:18px; margin-top:0; }
+  body.mobile .mutations{ display:flex; justify-content:center; padding:5px 12px; gap:18px; margin-top:0; }
   body.mobile .mutemote{ font-size:19px; }
   body.mobile .mut-row input{ width:16px; height:16px; }
 
@@ -371,12 +371,12 @@
           <div class="rules-body" id="rulesBody" hidden>
             • Pick a number and build an equation using all 3 rolled dice.<br>
             • Solve <b>both</b> halves of a pair to lock them and get 1 extra point.<br>
-            • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>, factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
+            • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>/<code>s</code> (<code>s4</code>=2), factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b> ❌ crosses impossible tiles at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 2.7</b>
+            • Version: <b>Špeezy 2.71</b>
           </div>
         </div>
       </div>
@@ -441,7 +441,7 @@ function applyMyColor(){
   const dc=$('diceCard'), sv=$('solver');
   if(myColor){
     if(dc){ dc.style.border='2px solid '+myColor; dc.style.background='linear-gradient(180deg,'+hexA(myColor,.16)+','+hexA(myColor,.05)+')'; dc.style.boxShadow='0 0 0 1px '+hexA(myColor,.45)+', 0 8px 22px '+hexA(myColor,.18); }
-    if(sv){ sv.style.boxShadow='0 0 20px '+hexA(myColor,.18)+', 0 14px 40px rgba(0,0,0,.45)'; }   /* subtle hint of my colour */
+    if(sv){ sv.style.boxShadow='0 0 0 2px '+hexA(myColor,.55)+', 0 0 22px '+hexA(myColor,.4)+', inset 0 0 26px '+hexA(myColor,.12)+', 0 14px 40px rgba(0,0,0,.45)'; }   /* clear hint of my colour */
   } else {
     if(dc){ dc.style.border=''; dc.style.background=''; dc.style.boxShadow=''; }
     if(sv){ sv.style.boxShadow=''; }
@@ -956,8 +956,6 @@ function setLayout(mobile){
   document.body.classList.toggle('mobile', !!mobile);
   const _rl=document.querySelector('.rules'), _stg=document.querySelector('.stage'), _mn=document.querySelector('.main');
   if(_rl){ if(mobile && _stg) _stg.appendChild(_rl); else if(!mobile && _mn) _mn.appendChild(_rl); }
-  const _dc=document.getElementById('diceCard'), _sv=document.getElementById('solver'), _tg=document.getElementById('targets');
-  if(_dc){ if(mobile && _sv) _sv.insertAdjacentElement('afterend', _dc); else if(!mobile && _mn && _tg) _mn.insertBefore(_dc, _tg); }   /* mobile: rolled numbers go right under the calculator */
   applyMyColor();
   const b=$('layoutToggle'); if(b) b.textContent = mobile ? '🖥️ Desktop layout' : '📱 Mobile layout';
   applyEquationMode();
