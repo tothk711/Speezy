@@ -313,7 +313,7 @@ function computeScores(pairs){
   pairs.forEach(p=>{
     p.tiles.forEach(t=>{ if(t.done && t.color){ m[t.color]=(m[t.color]||0)+(t.bounty?2:1); } });
     if(p.tiles[0].done && p.tiles[1].done && p.tiles[0].color===p.tiles[1].color){
-      const c=p.tiles[0].color; m[c]=(m[c]||0)+1;
+      const c=p.tiles[0].color; m[c]=(m[c]||0)+(p.tiles[0].bounty?0:1);
     }
   });
   return m;

@@ -375,8 +375,8 @@
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
-            • <b>Mutations</b> ❌ crosses impossible tiles at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 5 for locking the pair.<br>
-            • Version: <b>Špeezy 2.65</b>
+            • <b>Mutations</b> ❌ crosses impossible tiles at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
+            • Version: <b>Špeezy 2.7</b>
           </div>
         </div>
       </div>
@@ -405,7 +405,7 @@
           <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
             <input type="checkbox" id="mutHints" checked><span class="mutemote">💡</span>
           </label>
-          <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 5 (applies next round)">
+          <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 4 (applies next round)">
             <input type="checkbox" id="mutBounty" checked><span class="mutemote">💰</span>
           </label>
         </div>
@@ -437,6 +437,16 @@ let myClaimLog={}, lastRoundId=-1, lastAvail='', lastBoardSig='', lastAttempt=nu
 let recentTakes={}, crossShown={}, msgTimer=null;
 
 function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
+function applyMyColor(){
+  const dc=$('diceCard'), sv=$('solver');
+  if(myColor){
+    if(dc){ dc.style.border='2px solid '+myColor; dc.style.background='linear-gradient(180deg,'+hexA(myColor,.16)+','+hexA(myColor,.05)+')'; dc.style.boxShadow='0 0 0 1px '+hexA(myColor,.45)+', 0 8px 22px '+hexA(myColor,.18); }
+    if(sv){ sv.style.boxShadow='0 0 20px '+hexA(myColor,.18)+', 0 14px 40px rgba(0,0,0,.45)'; }   /* subtle hint of my colour */
+  } else {
+    if(dc){ dc.style.border=''; dc.style.background=''; dc.style.boxShadow=''; }
+    if(sv){ sv.style.boxShadow=''; }
+  }
+}
 function setMsg(t,cls){
   const m=$('msg'); m.textContent=t; m.className='msg'+(cls?(' '+cls):'');
   m.style.opacity = t?'1':'';
@@ -477,7 +487,7 @@ socket.on('connect',()=>{ setConn(); socket.emit('sync'); });   // catch up imme
 socket.on('disconnect',()=>{ setConn(); });
 // Watchdog: connected but haven't heard from the server in a while -> ask for a fresh state.
 setInterval(()=>{ if(socket.connected && Date.now()-lastStateAt>=8000) socket.emit('sync'); }, 4000);
-socket.on('you', c=>{ myColor=c||null; setConn(); if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
+socket.on('you', c=>{ myColor=c||null; setConn(); applyMyColor(); if(G){ renderPalette(); refreshSolver(); lastBoardSig=''; renderTargets(); } });
 socket.on('fx', f=>{ try{
   if(!f) return;
   if(f.type==='bounty'){ showBounty(f.pi); return; }
@@ -823,7 +833,7 @@ function showBounty(pi){
   positionBounty();
   bb.classList.remove('show'); void bb.offsetWidth; bb.classList.add('show');   // restart the pop
   soundBounty();
-  clearTimeout(bountyTimer); bountyTimer=setTimeout(hideBounty, 4500);
+  clearTimeout(bountyTimer); bountyTimer=setTimeout(hideBounty, 2000);
 }
 
 /* ---------- tooltips ---------- */
@@ -946,6 +956,9 @@ function setLayout(mobile){
   document.body.classList.toggle('mobile', !!mobile);
   const _rl=document.querySelector('.rules'), _stg=document.querySelector('.stage'), _mn=document.querySelector('.main');
   if(_rl){ if(mobile && _stg) _stg.appendChild(_rl); else if(!mobile && _mn) _mn.appendChild(_rl); }
+  const _dc=document.getElementById('diceCard'), _sv=document.getElementById('solver'), _tg=document.getElementById('targets');
+  if(_dc){ if(mobile && _sv) _sv.insertAdjacentElement('afterend', _dc); else if(!mobile && _mn && _tg) _mn.insertBefore(_dc, _tg); }   /* mobile: rolled numbers go right under the calculator */
+  applyMyColor();
   const b=$('layoutToggle'); if(b) b.textContent = mobile ? '🖥️ Desktop layout' : '📱 Mobile layout';
   applyEquationMode();
   if(mobile){ const eq=$('equation'); if(eq) eq.blur(); }
