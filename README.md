@@ -1,10 +1,51 @@
-# Špeezy — Multiplayer (v2.71)
+# Špeezy — Multiplayer (v3.0)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
 
 Flat layout — `index.html`, `game.js`, `server.js` and `package.json` all sit at
 the top level (no `public/` folder). Drop them into your repo and push.
+
+## What's new in 3.0
+**Smoothness refactor**
+- The board is built once per round and **diff-updated in place** — CSS animations
+  no longer restart on every update, hover states survive, and there's no
+  per-render DOM churn. Tooltips and clicks use event delegation.
+- The server no longer broadcasts the full game state every second: a tiny
+  `tick` event carries the clock (~30 bytes), full state goes out only on real
+  changes (claims, joins, round events).
+- `index.html`/`game.js` are served with `Cache-Control: no-store`, so a fresh
+  deploy shows up on a plain refresh — no more hard-refresh hunting.
+
+**New mutator: ⚡ Surge**
+- Once per round, at a random moment between 1:30 and 0:35 left, a **12-second
+  surge** hits (electric toast + glow + riser sound): every claim during it is
+  worth **+1 point** and adds **+10s**. Tiles claimed during a surge keep a small
+  ⚡ badge. On by default, toggleable like the other mutators.
+
+**Game feel**
+- Dice **tumble and settle** one by one with little clacks on each new round.
+- **Confetti burst** on every lock (bigger and gold for bounty/surge locks),
+  a color ripple on every claimed tile, and a floating **"+N"** showing the
+  points earned.
+- Score numbers **pop** when they increase; the round winner gets a 👑 in the
+  end-of-round banner.
+- **Streaks:** chain claims within 12s and your success chime rises in pitch,
+  with a 🔥×N tag on the floating points.
+- Wrong answers get a gentle buzz + input shake; round end plays a soft chord
+  (up for a cleared board, down for time-up). Quiet clicks on calculator keys.
+- 🔊 **mute toggle** (top-right, remembered).
+
+**Mobile**
+- The calculator is now a **fixed bottom sheet** — always reachable while the
+  board scrolls, safe-area aware, with a **mini timer** in its header and
+  comfier keys. It hides at round end so you can browse solutions.
+- The tab resyncs instantly when you come back to it (phones suspend sockets
+  in the background).
+
+**Desktop QoL**
+- Start typing anywhere — digits/operators go straight into the equation.
+- `Esc` clears the selection.
 
 ## Run locally
 ```bash

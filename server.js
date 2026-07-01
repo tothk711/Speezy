@@ -17,23 +17,32 @@ function find(file){
   return null;
 }
 
-app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve index.html and game.js with no-store so a fresh deploy shows up on a plain refresh
+// (stale browser caches were a recurring "my change isn't live" headache).
+const staticOpts = {
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html') || filePath.endsWith('game.js')) res.set('Cache-Control', 'no-store');
+  }
+};
+app.use(express.static(__dirname, staticOpts));
+app.use(express.static(path.join(__dirname, 'public'), staticOpts));
 
 app.get('/', (req, res) => {
   const idx = find('index.html');
-  if (idx) return res.sendFile(idx);
+  if (idx) { res.set('Cache-Control', 'no-store'); return res.sendFile(idx); }
   res.status(500).send('index.html not found in the deployment.');
 });
 app.get('/game.js', (req, res) => {
   const g = find('game.js');
-  if (g) return res.sendFile(g);
+  if (g) { res.set('Cache-Control', 'no-store'); return res.sendFile(g); }
   res.status(404).send('game.js not found');
 });
 
 const game = new Game(
   (g) => io.emit('state', g.serialize()),
-  (fx) => io.emit('fx', fx)
+  (fx) => io.emit('fx', fx),
+  (g) => io.emit('tick', { t: Math.max(0, g.timeLeft), s: g.surgeLeft || 0 })  // light 1/s heartbeat instead of full state
 );
 
 io.on('connection', (socket) => {
@@ -64,6 +73,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 const idx = find('index.html');
 server.listen(PORT, () => {
-  console.log('Speezy 2.71 running on port ' + PORT);
+  console.log('Speezy 3.0 running on port ' + PORT);
   console.log('Serving client from: ' + (idx || 'NOT FOUND — check that index.html is in the repo'));
 });

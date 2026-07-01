@@ -256,6 +256,7 @@ function solveAll(dice){
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
+const SURGE_LEN=12, SURGE_MIN=35, SURGE_MAX=90;   // ⚡ surge: fires once at a random second (timeLeft) in [MIN,MAX]
 const SEAT_GRACE=30000;   // hold a player's color this long after they drop, so a quick reconnect reclaims it
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
@@ -308,10 +309,11 @@ function valueCooldownLeft(claimLog,color,value,now){
   const ts = claimLog[color] && claimLog[color][value];
   return ts ? Math.max(0, COOLDOWN-(now-ts)) : 0;
 }
+function tilePoints(t){ return 1 + (t.bounty?1:0) + (t.hot?1:0); }   // hot = claimed during a ⚡ surge
 function computeScores(pairs){
   const m={};
   pairs.forEach(p=>{
-    p.tiles.forEach(t=>{ if(t.done && t.color){ m[t.color]=(m[t.color]||0)+(t.bounty?2:1); } });
+    p.tiles.forEach(t=>{ if(t.done && t.color){ m[t.color]=(m[t.color]||0)+tilePoints(t); } });
     if(p.tiles[0].done && p.tiles[1].done && p.tiles[0].color===p.tiles[1].color){
       const c=p.tiles[0].color; m[c]=(m[c]||0)+(p.tiles[0].bounty?0:1);
     }
@@ -322,15 +324,16 @@ function computeScores(pairs){
 /* ================= API ================= */
 const API={
   autoClose, evaluate, usesNumbers, solveAll, prettyEq,
-  isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores, timeBonus,
-  D3, ROUND, COOLDOWN, POOL, COLORS
+  isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores, tilePoints, timeBonus,
+  D3, ROUND, COOLDOWN, POOL, COLORS, SURGE_LEN
 };
 
 /* ================= Server-only: authoritative Game ================= */
 class Game {
-  constructor(onChange, onFx){
+  constructor(onChange, onFx, onTick){
     this.onChange = onChange ? (()=>onChange(this)) : (()=>{});
     this.onFx = onFx || (()=>{});
+    this.onTick = onTick ? (()=>onTick(this)) : this.onChange;   // light per-second heartbeat; falls back to full state
     this.seats = {};         // cid -> hex (the color a player holds)
     this.takenBy = {};       // hex -> cid
     this.socketCid = {};     // socketId -> cid
@@ -339,8 +342,8 @@ class Game {
     this.seatGrace = SEAT_GRACE;
     this.initials = {};
     this.history = [];
-    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true };
-    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true };
+    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true, surge:true };
+    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true, surge:true };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>{ try{ this.tick(); }catch(e){ console.error('tick error', e); } }, 1000);
@@ -358,6 +361,8 @@ class Game {
     this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
     this.bountyPair = -1;
+    this.surgeAt = this.mutationsActive.surge ? (SURGE_MIN + Math.floor(Math.random()*(SURGE_MAX-SURGE_MIN+1))) : -1;
+    this.surgeLeft = 0; this.surgeFired = false;
     if(this.mutationsActive.bounty){
       const map=this._solveMap();
       const cands=[];
@@ -375,10 +380,15 @@ class Game {
   tick(){
     if(this.ended) return;
     this.timeLeft--;
-    if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; }
+    let full=false;   // most seconds only the clock moves → send the light 'tick'; real changes get full state
+    if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; full=true; }
     if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
+    if(!this.surgeFired && this.surgeAt>0 && this.timeLeft===this.surgeAt){
+      this.surgeFired=true; this.surgeLeft=SURGE_LEN;
+      this.onFx({type:'surge', secs:SURGE_LEN});
+    } else if(this.surgeLeft>0){ this.surgeLeft--; }
     if(this.timeLeft<=0){ this.timeLeft=0; this.endRound('time'); return; }
-    this.onChange();
+    if(full) this.onChange(); else this.onTick();
   }
   _solveMap(){ if(!this._sm) this._sm=solveAll(this.avail); return this._sm; }
   _computeCrosses(){
@@ -430,18 +440,22 @@ class Game {
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
     const isSteal=t.done;
     const closed=autoClose(eq);
+    const hot=this.surgeLeft>0;
     t.done=true; t.color=color; t.claimAt=now; t.eq=closed; t.crossed=false;
+    if(hot) t.hot=true;
     t.history=t.history||[]; t.history.push({color, eq:closed});
     this.claimLog[color]=this.claimLog[color]||{}; this.claimLog[color][t.val]=now;
-    this.timeLeft += timeBonus(this.timeLeft);
+    this.timeLeft += timeBonus(this.timeLeft) + (hot?10:0);
     const both=pair.tiles.every(x=>x.done);
     const locked=both && pair.tiles[0].color===pair.tiles[1].color;
     if(locked){ pair.color=pair.tiles[0].color; }
-    const msg = isSteal ? '🏴 Stolen! Pair locked for you (worth 3).'
-              : locked ? '🔒 Pair locked! (worth 3 pts)'
-              : both   ? '✓ Correct! +1  (split pair)'
-              : '✓ Correct! +1 — lock it by taking its partner in your color.';
-    this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty});
+    const pts = tilePoints(t) + (locked ? (t.bounty?0:1) : 0);   // points this claim adds to the scoreboard
+    const zap = hot ? '⚡ ' : '';
+    const msg = isSteal ? zap+'🏴 Stolen! Pair locked for you (+'+pts+').'
+              : locked ? zap+'🔒 Pair locked! (+'+pts+' pts)'
+              : both   ? zap+'✓ Correct! +'+pts+'  (split pair)'
+              : zap+'✓ Correct! +'+pts+' — lock it by taking its partner in your color.';
+    this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty, hot, pts});
     if(this.boardSettled()) this.endRound('locked');
     else if(this.roundDecided()) this.endRound('settled');
     this.onChange();
@@ -517,13 +531,14 @@ class Game {
     return {
       roundId:this.roundId,
       ended:this.ended, cleared:this.cleared, endReason:this.endReason||null,
-      bountyPulse: !this.ended && this.bountyPair>=0 && ((Date.now()-(this.roundStart||0)) < 20000),
+      roundAge: now-(this.roundStart||now),               // lets the client time round-relative FX (bounty pulse) precisely
+      surge:this.surgeLeft>0, surgeLeft:this.surgeLeft,
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({
         color:p.color||null, bounty:!!p.bounty,
         tiles:p.tiles.map(t=>({
-          val:t.val, done:!!t.done, color:t.color||null,
+          val:t.val, done:!!t.done, color:t.color||null, hot:!!t.hot,
           age: t.done ? (now-(t.claimAt||now)) : null,
           history: t.history||null,
           crossed: !!t.crossed,
