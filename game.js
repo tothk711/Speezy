@@ -256,7 +256,7 @@ function solveAll(dice){
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
-const SURGE_LEN=12, SURGE_MIN=35, SURGE_MAX=90;   // ⚡ surge: fires once at a random second (timeLeft) in [MIN,MAX]
+const JOKER_LEN=30, JOKER_MIN=65, JOKER_MAX=95;   // 🃏 joker die: appears once per round at a random second (timeLeft) in [MIN,MAX], lasts 30 ticks
 const SEAT_GRACE=30000;   // hold a player's color this long after they drop, so a quick reconnect reclaims it
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
@@ -309,7 +309,7 @@ function valueCooldownLeft(claimLog,color,value,now){
   const ts = claimLog[color] && claimLog[color][value];
   return ts ? Math.max(0, COOLDOWN-(now-ts)) : 0;
 }
-function tilePoints(t){ return 1 + (t.bounty?1:0) + (t.hot?1:0); }   // hot = claimed during a ⚡ surge
+function tilePoints(t){ return 1 + (t.bounty?1:0); }
 function computeScores(pairs){
   const m={};
   pairs.forEach(p=>{
@@ -325,7 +325,7 @@ function computeScores(pairs){
 const API={
   autoClose, evaluate, usesNumbers, solveAll, prettyEq,
   isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores, tilePoints, timeBonus,
-  D3, ROUND, COOLDOWN, POOL, COLORS, SURGE_LEN
+  D3, ROUND, COOLDOWN, POOL, COLORS, JOKER_LEN
 };
 
 /* ================= Server-only: authoritative Game ================= */
@@ -342,8 +342,8 @@ class Game {
     this.seatGrace = SEAT_GRACE;
     this.initials = {};
     this.history = [];
-    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true, surge:true };
-    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true, surge:true };
+    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true };
+    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>{ try{ this.tick(); }catch(e){ console.error('tick error', e); } }, 1000);
@@ -361,8 +361,8 @@ class Game {
     this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
     this.bountyPair = -1;
-    this.surgeAt = this.mutationsActive.surge ? (SURGE_MIN + Math.floor(Math.random()*(SURGE_MAX-SURGE_MIN+1))) : -1;
-    this.surgeLeft = 0; this.surgeFired = false;
+    this.jokerAt = this.mutationsActive.joker ? (JOKER_MIN + Math.floor(Math.random()*(JOKER_MAX-JOKER_MIN+1))) : -1;
+    this.jokerLeft = 0; this.jokerVal = null; this.jokerFired = false;
     if(this.mutationsActive.bounty){
       const map=this._solveMap();
       const cands=[];
@@ -383,10 +383,15 @@ class Game {
     let full=false;   // most seconds only the clock moves → send the light 'tick'; real changes get full state
     if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; full=true; }
     if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
-    if(!this.surgeFired && this.surgeAt>0 && this.timeLeft===this.surgeAt){
-      this.surgeFired=true; this.surgeLeft=SURGE_LEN;
-      this.onFx({type:'surge', secs:SURGE_LEN});
-    } else if(this.surgeLeft>0){ this.surgeLeft--; }
+    if(!this.jokerFired && this.jokerAt>0 && this.timeLeft===this.jokerAt){
+      this.jokerFired=true; this.jokerLeft=JOKER_LEN;
+      this.jokerVal=1+Math.floor(Math.random()*6);
+      this.onFx({type:'joker', secs:JOKER_LEN, value:this.jokerVal});
+      full=true;                                       // clients need the new die in state too
+    } else if(this.jokerLeft>0){
+      this.jokerLeft--;
+      if(this.jokerLeft===0){ this.jokerVal=null; full=true; }   // window over — the die disappears
+    }
     if(this.timeLeft<=0){ this.timeLeft=0; this.endRound('time'); return; }
     if(full) this.onChange(); else this.onTick();
   }
@@ -432,32 +437,44 @@ class Game {
     const pair=this.pairs[pi]; if(!pair) return {ok:false, message:'Bad tile.'};
     const t=pair.tiles[ti]; if(!t) return {ok:false, message:'Bad tile.'};
     const now=Date.now();
-    if(t.done && !stealable(this.pairs,pi,ti,color,now)) return {ok:false, message:'You can’t take that tile right now.'};
+    if(t.done && !stealable(this.pairs,pi,ti,color,now)){
+      if(isStealTarget(this.pairs,pi,ti,color)){
+        const rem=Math.max(1,Math.ceil((COOLDOWN-(now-(t.claimAt||0)))/1000));
+        return {ok:false, message:'🛡️ Still protected — try again in '+rem+'s.'};
+      }
+      return {ok:false, message:'You can’t take that tile right now.'};
+    }
     const vleft=valueCooldownLeft(this.claimLog,color,t.val,now);
-    if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — wait a moment.'};
+    if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — ready in '+Math.ceil(vleft/1000)+'s.'};
     let r; try{ r=evaluate(eq||''); }catch(e){ return {ok:false, message:'⚠ '+e.message}; }
-    if(!usesNumbers(r.litStrs, this.avail)) return {ok:false, message:'✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
+    const jk = this.jokerLeft>0 && this.jokerVal!=null;
+    let diceOk = usesNumbers(r.litStrs, this.avail);
+    if(!diceOk && jk){
+      const four=this.avail.concat([this.jokerVal]);
+      diceOk = usesNumbers(r.litStrs, four);
+      for(let skip=0; !diceOk && skip<3; skip++) diceOk = usesNumbers(r.litStrs, four.filter((_,i)=>i!==skip));
+    }
+    if(!diceOk) return {ok:false, message: jk
+      ? '✗ Joker window: use any 3 — or all 4 — of ('+this.avail.concat([this.jokerVal]).join(', ')+'), each once.'
+      : '✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
     const isSteal=t.done;
     const closed=autoClose(eq);
-    const hot=this.surgeLeft>0;
     t.done=true; t.color=color; t.claimAt=now; t.eq=closed; t.crossed=false;
-    if(hot) t.hot=true;
     t.history=t.history||[]; t.history.push({color, eq:closed});
     this.claimLog[color]=this.claimLog[color]||{}; this.claimLog[color][t.val]=now;
-    this.timeLeft += timeBonus(this.timeLeft) + (hot?10:0);
+    this.timeLeft += timeBonus(this.timeLeft);
     const both=pair.tiles.every(x=>x.done);
     const locked=both && pair.tiles[0].color===pair.tiles[1].color;
     if(locked){ pair.color=pair.tiles[0].color; }
     const pts = tilePoints(t) + (locked ? (t.bounty?0:1) : 0);   // points this claim adds to the scoreboard
-    const zap = hot ? '⚡ ' : '';
-    const msg = isSteal ? zap+'🏴 Stolen! Pair locked for you (+'+pts+').'
-              : locked ? zap+'🔒 Pair locked! (+'+pts+' pts)'
-              : both   ? zap+'✓ Correct! +'+pts+'  (split pair)'
-              : zap+'✓ Correct! +'+pts+' — lock it by taking its partner in your color.';
-    this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty, hot, pts});
+    const msg = isSteal ? '🏴 Stolen! Pair locked for you (+'+pts+').'
+              : locked ? '🔒 Pair locked! (+'+pts+' pts)'
+              : both   ? '✓ Correct! +'+pts+'  (split pair)'
+              : '✓ Correct! +'+pts+' — lock it by taking its partner in your color.';
+    this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty, pts});
     if(this.boardSettled()) this.endRound('locked');
-    else if(this.roundDecided()) this.endRound('settled');
+    else if(this.jokerLeft<=0 && this.roundDecided()) this.endRound('settled');   // during a joker window extra claims may still be possible
     this.onChange();
     return {ok:true, message:msg};
   }
@@ -532,13 +549,13 @@ class Game {
       roundId:this.roundId,
       ended:this.ended, cleared:this.cleared, endReason:this.endReason||null,
       roundAge: now-(this.roundStart||now),               // lets the client time round-relative FX (bounty pulse) precisely
-      surge:this.surgeLeft>0, surgeLeft:this.surgeLeft,
+      joker:(this.jokerLeft>0 ? this.jokerVal : null), jokerLeft:this.jokerLeft,
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({
         color:p.color||null, bounty:!!p.bounty,
         tiles:p.tiles.map(t=>({
-          val:t.val, done:!!t.done, color:t.color||null, hot:!!t.hot,
+          val:t.val, done:!!t.done, color:t.color||null,
           age: t.done ? (now-(t.claimAt||now)) : null,
           history: t.history||null,
           crossed: !!t.crossed,
