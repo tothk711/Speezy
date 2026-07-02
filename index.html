@@ -57,18 +57,15 @@
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
   .stats{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;position:relative;margin-bottom:18px;
+    background:linear-gradient(180deg,rgba(24,28,52,.6),rgba(24,28,52,.28));border-color:rgba(42,47,82,.65);
     transition:background .35s, border-color .35s}
   .scores-stat{min-width:0}
   .timer-stat{justify-self:center;position:relative}
   .stats.timeup{border-color:rgba(248,113,113,.55);background:rgba(248,113,113,.10)}
   .stats.urgent{border-color:rgba(248,113,113,.7);background:rgba(248,113,113,.13);animation:urgentPulse 1s ease-in-out infinite}
   @keyframes urgentPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0)}50%{box-shadow:0 0 0 3px rgba(248,113,113,.28)}}
-  .stats.joker{border-color:rgba(167,139,250,.75);background:rgba(167,139,250,.10);animation:jokerPulse .9s ease-in-out infinite}
-  @keyframes jokerPulse{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0)}50%{box-shadow:0 0 0 3px rgba(167,139,250,.35),0 0 22px rgba(167,139,250,.22)}}
   .stat{display:flex;flex-direction:column;align-items:center;text-align:center}
   .stat b{font-size:24px;display:inline-block;transition:transform .2s ease}
-  #jokerTag{position:absolute;left:50%;transform:translateX(-50%);top:100%;white-space:nowrap;
-    color:var(--violet);font-weight:800;font-size:12px;text-shadow:0 0 8px rgba(167,139,250,.7)}
   .scores{display:flex;gap:18px;align-items:center;min-height:30px;justify-content:center;flex-wrap:wrap}
   .score{display:flex;align-items:center;gap:6px}
   .score .dot{width:11px;height:11px;border-radius:50%}
@@ -105,6 +102,25 @@
   .die.joker::after{content:"🃏";position:absolute;top:-11px;right:-9px;font-size:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
   .die.fadeout{animation:dieFade .4s ease forwards}
   @keyframes dieFade{to{opacity:0;transform:scale(.55)}}
+  .dice-strip{padding:6px 0 4px;margin-bottom:12px}   /* the dice float free — no box; your color tints the dice */
+  body.tinted .die:not(.joker){border-color:var(--mycol);box-shadow:0 6px 16px rgba(0,0,0,.35), 0 0 14px var(--mycolA)}
+  /* phase chip — lives right next to the dice */
+  .phase-chip{display:inline-flex;align-items:center;gap:7px;margin-left:18px;padding:8px 14px;border-radius:999px;
+    font-weight:800;font-size:14px;letter-spacing:.3px;position:relative;overflow:hidden;color:var(--muted);
+    background:linear-gradient(135deg,rgba(139,145,184,.14),rgba(139,145,184,.04));border:1px solid rgba(139,145,184,.35);
+    transition:background .5s, border-color .5s, color .5s, box-shadow .5s}
+  .phase-chip .phase-ico{font-size:18px;line-height:1}
+  .phase-chip .phase-count{font-size:12px;font-weight:700;opacity:.8;font-variant-numeric:tabular-nums;min-width:24px}
+  .phase-chip.joker{background:linear-gradient(135deg,rgba(167,139,250,.24),rgba(124,58,237,.08));border-color:rgba(167,139,250,.65);color:#dcd2ff;box-shadow:0 0 18px rgba(167,139,250,.28)}
+  .phase-chip.cleanup{background:linear-gradient(135deg,rgba(248,113,113,.22),rgba(248,113,113,.06));border-color:rgba(248,113,113,.6);color:#ffd9d9;box-shadow:0 0 18px rgba(248,113,113,.22)}
+  .phase-chip.endgame{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(251,191,36,.06));border-color:rgba(251,191,36,.6);color:#ffedc2;box-shadow:0 0 18px rgba(251,191,36,.2)}
+  .phase-chip.over{opacity:.7}
+  .phase-chip.pop{animation:phasePop .6s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes phasePop{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+  .phase-chip::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;transform:skewX(-22deg);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);opacity:0}
+  .phase-chip.pop::after{animation:phaseShine .7s ease .1s}
+  @keyframes phaseShine{0%{left:-70%;opacity:1}100%{left:130%;opacity:0}}
 
   /* targets */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-top:6px}
@@ -218,7 +234,8 @@
   .msg.bad{color:var(--danger)}
   .msg.steal{color:var(--salmon)}
 
-  .mutations{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin-top:16px;display:inline-flex;gap:22px}
+  .mutations{background:transparent;border:none;border-radius:14px;padding:8px 6px;margin-top:8px;display:inline-flex;gap:22px;opacity:.85;transition:opacity .2s}
+  .mutations:hover{opacity:1}
   .mut-row{display:flex;align-items:center;gap:12px;cursor:pointer}
   .mut-row input{width:18px;height:18px;accent-color:var(--accent2);cursor:pointer}
   .mutemote{font-size:24px;line-height:1}
@@ -245,14 +262,18 @@
   }
   #hint.show{opacity:1}
 
-  /* 🃏 joker toast */
-  #jokerToast{position:fixed;left:50%;top:20%;transform:translate(-50%,-50%) scale(.5);z-index:80;pointer-events:none;
-    background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(124,58,237,.10));border:2px solid var(--violet);
-    color:#e6dcff;font-weight:900;font-size:25px;padding:14px 26px;border-radius:16px;opacity:0;white-space:nowrap;
-    text-shadow:0 0 14px rgba(167,139,250,.9);box-shadow:0 0 34px rgba(167,139,250,.45), inset 0 0 18px rgba(167,139,250,.18);
-    backdrop-filter:blur(4px)}
-  #jokerToast.show{animation:jokerIn 2.1s cubic-bezier(.2,1.4,.3,1) forwards}
-  @keyframes jokerIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.07)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+  /* phase toasts (🃏 joker / 🧹 cleanup / ⏱ endgame) */
+  #phaseToast{position:fixed;left:50%;top:20%;transform:translate(-50%,-50%) scale(.5);z-index:80;pointer-events:none;
+    font-weight:900;font-size:25px;padding:14px 26px;border-radius:16px;opacity:0;white-space:nowrap;
+    border:2px solid var(--muted);color:var(--text);background:rgba(24,28,52,.75);backdrop-filter:blur(4px)}
+  #phaseToast.joker{border-color:var(--violet);color:#e6dcff;background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(124,58,237,.10));
+    text-shadow:0 0 14px rgba(167,139,250,.9);box-shadow:0 0 34px rgba(167,139,250,.45), inset 0 0 18px rgba(167,139,250,.18)}
+  #phaseToast.cleanup{border-color:var(--danger);color:#ffe1e1;background:linear-gradient(135deg,rgba(248,113,113,.18),rgba(190,30,30,.10));
+    text-shadow:0 0 14px rgba(248,113,113,.85);box-shadow:0 0 34px rgba(248,113,113,.4), inset 0 0 18px rgba(248,113,113,.16)}
+  #phaseToast.endgame{border-color:var(--yellow);color:#ffedc2;background:linear-gradient(135deg,rgba(251,191,36,.18),rgba(180,120,10,.10));
+    text-shadow:0 0 14px rgba(251,191,36,.85);box-shadow:0 0 34px rgba(251,191,36,.4), inset 0 0 18px rgba(251,191,36,.16)}
+  #phaseToast.show{animation:phaseIn 2.1s cubic-bezier(.2,1.4,.3,1) forwards}
+  @keyframes phaseIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.07)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 
   .rules{color:var(--muted);font-size:12.5px;line-height:1.7;margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
   .rules-toggle{background:none;border:none;color:var(--text);font-weight:700;font-size:14px;cursor:pointer;padding:0;display:flex;align-items:center;gap:8px}
@@ -323,7 +344,10 @@
   body.mobile .card{ padding:8px; border-radius:11px; }
   body.mobile .stats{ gap:8px; margin-bottom:0; padding:8px; }
   body.mobile .stat b{ font-size:19px; }
-  body.mobile #jokerTag{ font-size:10px; }
+  body.mobile .dice-strip{ padding:2px 0; }
+  body.mobile .phase-chip{ margin-left:8px; padding:5px 10px; font-size:11px; gap:5px; }
+  body.mobile .phase-chip .phase-ico{ font-size:13px; }
+  body.mobile .phase-chip .phase-count{ font-size:9px; min-width:18px; }
   body.mobile .scores{ gap:10px; min-height:24px; }
   body.mobile .scnum{ font-size:18px; }
   body.mobile .newgame-wrap{ gap:6px; }
@@ -376,7 +400,7 @@
   body.mobile #tip{ font-size:15px; padding:9px 12px; }
   body.mobile #tip .tipline{ font-size:14px; }
   body.mobile #hint{ font-size:16px; padding:7px 11px; }
-  body.mobile #jokerToast{ font-size:18px; padding:10px 18px; }
+  body.mobile #phaseToast{ font-size:18px; padding:10px 18px; }
   body.mobile .die.joker::after{ font-size:11px; top:-8px; right:-5px; }
   body.mobile .ptsfloat{ font-size:16px; }
 
@@ -402,14 +426,14 @@
       <div class="main">
         <div class="card stats" id="statsCard">
           <div class="stat scores-stat"><div class="scores" id="scores"></div></div>
-          <div class="stat timer-stat"><b id="timer">2:00</b><span id="jokerTag" hidden>🃏</span></div>
+          <div class="stat timer-stat"><b id="timer">2:00</b></div>
           <div class="newgame-wrap">
             <button id="endRound" class="ghost">End Round</button>
             <button id="newGame" class="gold">🎲 New Game</button>
           </div>
         </div>
 
-        <div class="card" id="diceCard" style="margin-bottom:18px">
+        <div class="dice-strip" id="diceCard">
           <div class="dice-row">
             <span class="dice-emoji">🎲</span>
             <div class="dice-set" id="diceRow">
@@ -418,6 +442,7 @@
               <div class="die">?</div>
             </div>
             <span class="dice-emoji">🎲</span>
+            <div class="phase-chip" id="phaseChip"><span class="phase-ico" id="phaseIco">🍦</span><span id="phaseName">Vanilla</span><span class="phase-count" id="phaseCount"></span></div>
           </div>
         </div>
 
@@ -439,9 +464,10 @@
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
-            • <b>Mutations</b> ❌ crosses impossible tiles at 0:30; 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair; <b style="color:var(--violet)">🃏 joker</b> — once per round a 4th die appears for 30s and equations may use <b>any 3 or all 4</b> dice, each once.<br>
-            • You can select <b>any</b> tile at any time — even protected or cooling-down ones — to prewrite an equation, then press Check the moment it unlocks (countdowns show right on the tiles).<br>
-            • Version: <b>Špeezy 3.1</b>
+            • The round flows through <b>phases</b> (see the chip next to the dice): 🍦 <b>Vanilla</b> above 1:10 → <b style="color:var(--violet)">🃏 Joker</b> from 1:10 to 0:30 (a 4th die joins — use <b>any 3 or all 4</b> dice, each once) → <b style="color:var(--danger)">🧹 Cleanup</b> below 0:30 (impossible tiles get crossed). Phases never rewind, even when time bonuses push the clock back up.<br>
+            • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
+            • You can select <b>any</b> tile at any time — even protected or cooling-down ones — to prewrite an equation, then press Check the moment it unlocks (countdowns show right on the tiles). Missing brackets are fixed on both ends (<code>4+5)*2</code> works).<br>
+            • Version: <b>Špeezy 3.2</b>
           </div>
         </div>
       </div>
@@ -465,7 +491,7 @@
         </div>
 
         <div class="mutations">
-          <label class="mut-row" title="Premature crossing off — cross impossible tiles at 0:30 (applies next round)">
+          <label class="mut-row" title="Cleanup phase — below 0:30 impossible tiles get crossed (applies next round)">
             <input type="checkbox" id="mutPremature" checked><span class="mutemote">❌</span>
           </label>
           <label class="mut-row" title="Last-minute hints — at 0:15 a partial solution pops up on a random unsolved tile for 10s (applies next round)">
@@ -474,7 +500,7 @@
           <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 4 (applies next round)">
             <input type="checkbox" id="mutBounty" checked><span class="mutemote">💰</span>
           </label>
-          <label class="mut-row" title="Joker die — once per round a 4th die appears for 30 seconds; equations may use any 3 or all 4 dice, each once (applies next round)">
+          <label class="mut-row" title="Joker phase — from 1:10 to 0:30 a 4th die (1–6) joins; equations may use any 3 or all 4 dice, each once (applies next round)">
             <input type="checkbox" id="mutJoker" checked><span class="mutemote">🃏</span>
           </label>
         </div>
@@ -486,7 +512,7 @@
 <div id="tip"></div>
 <div id="hint"></div>
 <div id="bounty"></div>
-<div id="jokerToast">🃏 Joker die! Any 3 — or all 4</div>
+<div id="phaseToast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/game.js"></script>
@@ -510,12 +536,14 @@ let pulseUntil=0, myStreak=0, lastOkAt=0, prevScores={};
 
 function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
 function applyMyColor(){
-  const dc=$('diceCard'), sv=$('solver');
+  const sv=$('solver'), b=document.body;
   if(myColor){
-    if(dc){ dc.style.border='2px solid '+myColor; dc.style.background='linear-gradient(180deg,'+hexA(myColor,.16)+','+hexA(myColor,.05)+')'; dc.style.boxShadow='0 0 0 1px '+hexA(myColor,.45)+', 0 8px 22px '+hexA(myColor,.18); }
+    b.classList.add('tinted');                       // the dice themselves carry your color now — no box needed
+    b.style.setProperty('--mycol', myColor);
+    b.style.setProperty('--mycolA', hexA(myColor,.45));
     if(sv){ sv.style.boxShadow='0 0 0 2px '+hexA(myColor,.55)+', 0 0 22px '+hexA(myColor,.4)+', inset 0 0 26px '+hexA(myColor,.12)+', 0 14px 40px rgba(0,0,0,.45)'; }   /* clear hint of my colour */
   } else {
-    if(dc){ dc.style.border=''; dc.style.background=''; dc.style.boxShadow=''; }
+    b.classList.remove('tinted');
     if(sv){ sv.style.boxShadow=''; }
   }
 }
@@ -561,6 +589,7 @@ function soundError(){ blip(196,0,0.09,0.05,'triangle'); blip(147,0.08,0.14,0.05
 function soundZip(){ blip(660,0,0.05,0.025,'sine'); blip(990,0.045,0.07,0.025,'sine'); }
 function soundDie(i){ blip(200+i*70,0,0.05,0.06,'triangle'); }
 function soundJoker(){ blip(494,0,0.10,0.05,'sine'); blip(740,0.09,0.12,0.05,'sine'); blip(988,0.20,0.16,0.05,'triangle'); blip(1976,0.32,0.22,0.03,'sine'); }
+function soundSweep(){ blip(440,0,0.09,0.05,'triangle'); blip(349,0.08,0.10,0.05,'triangle'); blip(262,0.16,0.20,0.05,'triangle'); }
 function soundEnd(cleared){
   if(cleared){ blip(523,0,0.14,0.07,'sine'); blip(659,0.12,0.16,0.07,'sine'); blip(784,0.24,0.2,0.07,'sine'); blip(1047,0.36,0.3,0.06,'sine'); }
   else { blip(330,0,0.16,0.06,'sine'); blip(262,0.14,0.26,0.06,'sine'); }
@@ -593,7 +622,8 @@ socket.on('fx', f=>{ try{
   if(!f) return;
   if(f.type==='bounty'){ queueBounty(f.pi); return; }
   if(f.type==='hint'){ showHint(f.pi,f.ti,f.partial); return; }
-  if(f.type==='joker'){ jokerStrike(f.secs, f.value); return; }
+  if(f.type==='joker'){ jokerStrike(f.value); return; }
+  if(f.type==='phase'){ phaseStrike(f.id); return; }
   if(f.type!=='claim') return;
   const mine = f.color===myColor;
   if(mine){ const n=Date.now(); myStreak = (n-lastOkAt<12000) ? myStreak+1 : 1; lastOkAt=n; }
@@ -614,7 +644,7 @@ socket.on('tick', p=>{ try{
   lastStateAt=Date.now();
   if(!G || G.ended || !p) return;
   const prev=G.timeLeft;
-  G.timeLeft=p.t; G.jokerLeft=p.j||0;
+  G.timeLeft=p.t;
   updateTimer(); updateMood(); renderJoker();
   if(p.t<prev && p.t<=8 && p.t>=1) soundTick();
   updateBoard();   // catches time-based transitions: protection/cooldown expiry, bounty pulse end
@@ -651,7 +681,7 @@ function onState(st){
     myStreak=0; lastOkAt=0;
     setMsg('',''); $('equation').value=''; updatePreview();
     $('tip').classList.remove('show','cheat');
-    hideHint(); hideBounty(); hideJokerToast();
+    hideHint(); hideBounty(); hidePhaseToast();
     buildBoard();
   }
   renderDice();
@@ -676,12 +706,36 @@ function onState(st){
 /* ---------- mood: stats-card glow + joker tag (one place decides) ---------- */
 function updateMood(){
   const sc=$('statsCard'); if(!sc||!G) return;
-  const jok = !G.ended && (G.jokerLeft||0)>0;
-  sc.classList.toggle('joker', jok);
   sc.classList.toggle('timeup', !!(G.ended && !G.cleared));
-  sc.classList.toggle('urgent', !G.ended && !jok && G.timeLeft<=30);
-  const tag=$('jokerTag');
-  if(jok){ tag.hidden=false; tag.textContent='🃏 '+G.jokerLeft+'s'; } else tag.hidden=true;
+  sc.classList.toggle('urgent', !G.ended && G.timeLeft<=30);
+  updatePhaseChip();
+}
+/* ---------- phase chip (next to the dice) ---------- */
+let lastPhaseId='';
+function phaseInfo(){
+  if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla',count:''};
+  if(G.ended) return {id:'over',ico:'🏁',name:'Round over',count:''};
+  const ph=G.phase||0;
+  if(ph===1) return {id:'joker',ico:'🃏',name:'Joker',count:Math.max(0,(G.timeLeft||0)-(G.phaseNext||30))+'s'};
+  if(ph>=2) return G.cleanupPhase ? {id:'cleanup',ico:'🧹',name:'Cleanup',count:''}
+                                  : {id:'endgame',ico:'⏱',name:'Endgame',count:''};
+  return {id:'vanilla',ico:'🍦',name:'Vanilla',count:Math.max(0,(G.timeLeft||0)-(G.phaseNext||30))+'s'};
+}
+function updatePhaseChip(){
+  const chip=$('phaseChip'); if(!chip) return;
+  const inf=phaseInfo();
+  $('phaseIco').textContent=inf.ico;
+  $('phaseName').textContent=inf.name;
+  $('phaseCount').textContent=inf.count;
+  if(inf.id!==lastPhaseId){
+    const first=lastPhaseId==='';
+    lastPhaseId=inf.id;
+    chip.className='phase-chip '+inf.id;
+    if(!first && !RM){
+      chip.classList.add('pop');
+      setTimeout(()=>{ chip.classList.remove('pop'); },750);
+    }
+  }
 }
 
 /* ---------- roster (left): built once, updated in place so inputs keep focus ---------- */
@@ -761,7 +815,7 @@ function backspace(){
   updatePreview(); inp.focus();
 }
 function clearEq(){ const inp=$('equation'); if(inp.disabled) return; inp.value=''; updatePreview(); inp.focus(); }
-function jokerOn(){ return !!(G && !G.ended && (G.jokerLeft||0)>0 && G.joker!=null); }
+function jokerOn(){ return !!(G && !G.ended && G.phase===1 && G.joker!=null); }
 function effAvail(){ return jokerOn() ? G.avail.concat([G.joker]) : G.avail; }
 function renderCalcGrid(){
   const g=$('calcgrid'); if(!g||!G) return; g.innerHTML='';
@@ -1008,17 +1062,28 @@ function floatPts(pi,text,color){
   setTimeout(()=>{ if(d.parentNode) d.remove(); },1200);
 }
 
-/* ---------- 🃏 joker die (a 4th die for 30s; use any 3 or all 4) ---------- */
-let jokerToastTimer=null;
-function jokerStrike(secs,value){
-  if(!G||G.ended) return;
-  G.jokerLeft=secs||30; if(value!=null) G.joker=value;
-  const t=$('jokerToast');
+/* ---------- phase transitions (🃏 joker die / 🧹 cleanup / ⏱ endgame) ---------- */
+let phaseToastTimer=null;
+function showPhaseToast(kind, text){
+  const t=$('phaseToast');
+  t.className=kind; t.textContent=text;
   t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
-  clearTimeout(jokerToastTimer); jokerToastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+  clearTimeout(phaseToastTimer); phaseToastTimer=setTimeout(()=>t.classList.remove('show'),2300);
+}
+function hidePhaseToast(){ clearTimeout(phaseToastTimer); $('phaseToast').classList.remove('show'); }
+function jokerStrike(value){
+  if(!G||G.ended) return;
+  G.phase=1; if(value!=null) G.joker=value;
+  showPhaseToast('joker','🃏 Joker phase! Any 3 — or all 4 dice');
   soundJoker(); renderJoker(); updateMood();
 }
-function hideJokerToast(){ clearTimeout(jokerToastTimer); $('jokerToast').classList.remove('show'); }
+function phaseStrike(id){
+  if(!G||G.ended) return;
+  G.phase=2; G.joker=null;
+  if(id==='cleanup') showPhaseToast('cleanup','🧹 Cleanup phase! Impossible tiles get crossed');
+  else showPhaseToast('endgame','⏱ Endgame!');
+  soundSweep(); renderJoker(); updateMood();
+}
 function renderJoker(){
   if(!G) return;
   const active=jokerOn();

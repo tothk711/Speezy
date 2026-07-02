@@ -8,6 +8,12 @@ function autoClose(expr){
   for(const ch of expr){ if(ch==='(') o++; else if(ch===')') c++; }
   return o>c ? expr + ')'.repeat(o-c) : expr;
 }
+function autoOpen(expr){
+  // mirror of autoClose: if a ')' ever dips below depth 0, prepend the missing '(' — so "4+5)*2" works
+  let depth=0, min=0;
+  for(const ch of expr){ if(ch==='(') depth++; else if(ch===')'){ depth--; if(depth<min) min=depth; } }
+  return min<0 ? '('.repeat(-min)+expr : expr;
+}
 function tokenize(expr){
   expr = expr.replace(/×/g,'*').replace(/÷/g,'/').replace(/√/g,'sqrt').replace(/\s+/g,'');
   const tokens=[]; let i=0;
@@ -105,7 +111,7 @@ function evalRPN(rpn){
   return st[0];
 }
 function evaluate(expr){
-  expr = autoClose(expr);
+  expr = autoClose(autoOpen(expr));   // rescue missing brackets on both ends
   const tokens=tokenize(expr);
   const nums=tokens.filter(t=>t.type==='num');
   return { value:evalRPN(toRPN(tokens)), literals:nums.map(t=>t.value), litStrs:nums.map(t=>t.raw) };
@@ -256,7 +262,7 @@ function solveAll(dice){
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
-const JOKER_LEN=30, JOKER_MIN=65, JOKER_MAX=95;   // 🃏 joker die: appears once per round at a random second (timeLeft) in [MIN,MAX], lasts 30 ticks
+const JOKER_AT=70;   // 🃏 joker phase runs from 1:10 (timeLeft 70) down to the cleanup mark at 0:30 (CROSS_AT)
 const SEAT_GRACE=30000;   // hold a player's color this long after they drop, so a quick reconnect reclaims it
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
@@ -323,9 +329,9 @@ function computeScores(pairs){
 
 /* ================= API ================= */
 const API={
-  autoClose, evaluate, usesNumbers, solveAll, prettyEq,
+  autoClose, autoOpen, evaluate, usesNumbers, solveAll, prettyEq,
   isLocked, isStealTarget, stealable, protectedTarget, valueCooldownLeft, computeScores, tilePoints, timeBonus,
-  D3, ROUND, COOLDOWN, POOL, COLORS, JOKER_LEN
+  D3, ROUND, COOLDOWN, POOL, COLORS, JOKER_AT, CROSS_AT
 };
 
 /* ================= Server-only: authoritative Game ================= */
@@ -361,8 +367,8 @@ class Game {
     this.mutationsActive = Object.assign({}, this.mutationsPending);
     this.crossComputed = false;
     this.bountyPair = -1;
-    this.jokerAt = this.mutationsActive.joker ? (JOKER_MIN + Math.floor(Math.random()*(JOKER_MAX-JOKER_MIN+1))) : -1;
-    this.jokerLeft = 0; this.jokerVal = null; this.jokerFired = false;
+    this.phase = 0;          // 0 vanilla · 1 joker · 2 cleanup/endgame — monotonic, never goes back
+    this.jokerVal = null;
     if(this.mutationsActive.bounty){
       const map=this._solveMap();
       const cands=[];
@@ -381,17 +387,20 @@ class Game {
     if(this.ended) return;
     this.timeLeft--;
     let full=false;   // most seconds only the clock moves → send the light 'tick'; real changes get full state
-    if(this.mutationsActive.prematureCross && !this.crossComputed && this.timeLeft<=CROSS_AT){ this._computeCrosses(); this.crossComputed=true; full=true; }
-    if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
-    if(!this.jokerFired && this.jokerAt>0 && this.timeLeft===this.jokerAt){
-      this.jokerFired=true; this.jokerLeft=JOKER_LEN;
+    if(this.phase<1 && this.mutationsActive.joker && this.timeLeft<=JOKER_AT && this.timeLeft>CROSS_AT){
+      this.phase=1;                                    // 🃏 joker phase — 4th die until the 0:30 mark
       this.jokerVal=1+Math.floor(Math.random()*6);
-      this.onFx({type:'joker', secs:JOKER_LEN, value:this.jokerVal});
-      full=true;                                       // clients need the new die in state too
-    } else if(this.jokerLeft>0){
-      this.jokerLeft--;
-      if(this.jokerLeft===0){ this.jokerVal=null; full=true; }   // window over — the die disappears
+      this.onFx({type:'joker', value:this.jokerVal});
+      full=true;
     }
+    if(this.phase<2 && this.timeLeft<=CROSS_AT){
+      this.phase=2; this.jokerVal=null;                // 🧹 cleanup / ⏱ endgame — joker off for good, no rewinds
+      if(this.mutationsActive.prematureCross && !this.crossComputed){ this._computeCrosses(); this.crossComputed=true; }
+      this.onFx({type:'phase', id: this.mutationsActive.prematureCross ? 'cleanup' : 'endgame'});
+      if(this.roundDecided()){ this.endRound('settled'); return; }   // the joker chance is gone — settle now if nothing is left
+      full=true;
+    }
+    if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
     if(this.timeLeft<=0){ this.timeLeft=0; this.endRound('time'); return; }
     if(full) this.onChange(); else this.onTick();
   }
@@ -447,7 +456,7 @@ class Game {
     const vleft=valueCooldownLeft(this.claimLog,color,t.val,now);
     if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — ready in '+Math.ceil(vleft/1000)+'s.'};
     let r; try{ r=evaluate(eq||''); }catch(e){ return {ok:false, message:'⚠ '+e.message}; }
-    const jk = this.jokerLeft>0 && this.jokerVal!=null;
+    const jk = this.phase===1 && this.jokerVal!=null;
     let diceOk = usesNumbers(r.litStrs, this.avail);
     if(!diceOk && jk){
       const four=this.avail.concat([this.jokerVal]);
@@ -459,7 +468,7 @@ class Game {
       : '✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
     const isSteal=t.done;
-    const closed=autoClose(eq);
+    const closed=autoClose(autoOpen(eq));
     t.done=true; t.color=color; t.claimAt=now; t.eq=closed; t.crossed=false;
     t.history=t.history||[]; t.history.push({color, eq:closed});
     this.claimLog[color]=this.claimLog[color]||{}; this.claimLog[color][t.val]=now;
@@ -474,7 +483,7 @@ class Game {
               : '✓ Correct! +'+pts+' — lock it by taking its partner in your color.';
     this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty, pts});
     if(this.boardSettled()) this.endRound('locked');
-    else if(this.jokerLeft<=0 && this.roundDecided()) this.endRound('settled');   // during a joker window extra claims may still be possible
+    else if(!(this.phase<2 && this.mutationsActive.joker) && this.roundDecided()) this.endRound('settled');   // while a joker phase is active or still coming, new claims may become possible
     this.onChange();
     return {ok:true, message:msg};
   }
@@ -549,7 +558,10 @@ class Game {
       roundId:this.roundId,
       ended:this.ended, cleared:this.cleared, endReason:this.endReason||null,
       roundAge: now-(this.roundStart||now),               // lets the client time round-relative FX (bounty pulse) precisely
-      joker:(this.jokerLeft>0 ? this.jokerVal : null), jokerLeft:this.jokerLeft,
+      phase:this.phase,
+      phaseNext: this.phase===0 ? (this.mutationsActive.joker?JOKER_AT:CROSS_AT) : (this.phase===1 ? CROSS_AT : 0),
+      cleanupPhase: !!this.mutationsActive.prematureCross,
+      joker:(this.phase===1 ? this.jokerVal : null),
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({

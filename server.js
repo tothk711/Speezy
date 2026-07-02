@@ -42,7 +42,7 @@ app.get('/game.js', (req, res) => {
 const game = new Game(
   (g) => io.emit('state', g.serialize()),
   (fx) => io.emit('fx', fx),
-  (g) => io.emit('tick', { t: Math.max(0, g.timeLeft), j: g.jokerLeft || 0 })  // light 1/s heartbeat instead of full state
+  (g) => io.emit('tick', { t: Math.max(0, g.timeLeft) })  // light 1/s heartbeat instead of full state
 );
 
 io.on('connection', (socket) => {
@@ -73,6 +73,6 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 const idx = find('index.html');
 server.listen(PORT, () => {
-  console.log('Speezy 3.1 running on port ' + PORT);
+  console.log('Speezy 3.2 running on port ' + PORT);
   console.log('Serving client from: ' + (idx || 'NOT FOUND — check that index.html is in the repo'));
 });
