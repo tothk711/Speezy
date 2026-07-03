@@ -262,7 +262,7 @@ function solveAll(dice){
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
-const JOKER_AT=70;   // 🃏 joker phase runs from 1:10 (timeLeft 70) down to the cleanup mark at 0:30 (CROSS_AT)
+const JOKER_AT=60;   // 🃏 joker phase runs from 1:00 (timeLeft 60) down to the cleanup mark at 0:30 (CROSS_AT)
 const SEAT_GRACE=30000;   // hold a player's color this long after they drop, so a quick reconnect reclaims it
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
@@ -457,14 +457,10 @@ class Game {
     if(vleft>0) return {ok:false, message:'⏳ You claimed a '+t.val+' recently — ready in '+Math.ceil(vleft/1000)+'s.'};
     let r; try{ r=evaluate(eq||''); }catch(e){ return {ok:false, message:'⚠ '+e.message}; }
     const jk = this.phase===1 && this.jokerVal!=null;
-    let diceOk = usesNumbers(r.litStrs, this.avail);
-    if(!diceOk && jk){
-      const four=this.avail.concat([this.jokerVal]);
-      diceOk = usesNumbers(r.litStrs, four);
-      for(let skip=0; !diceOk && skip<3; skip++) diceOk = usesNumbers(r.litStrs, four.filter((_,i)=>i!==skip));
-    }
+    let diceOk = usesNumbers(r.litStrs, this.avail);                                    // all three dice, each once…
+    if(!diceOk && jk) diceOk = usesNumbers(r.litStrs, this.avail.concat([this.jokerVal]));   // …plus optionally the joker
     if(!diceOk) return {ok:false, message: jk
-      ? '✗ Joker window: use any 3 — or all 4 — of ('+this.avail.concat([this.jokerVal]).join(', ')+'), each once.'
+      ? '✗ Use all three dice ('+this.avail.join(', ')+'), each once — the joker '+this.jokerVal+' is an optional extra.'
       : '✗ Use all three dice ('+this.avail.join(', ')+'), each once.'};
     if(Math.abs(r.value-t.val)>1e-6) return {ok:false, message:'✗ That equals '+(Number.isInteger(r.value)?r.value:r.value.toFixed(2))+', not '+t.val+'.'};
     const isSteal=t.done;

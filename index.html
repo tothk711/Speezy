@@ -108,18 +108,16 @@
   .phase-chip{display:inline-flex;align-items:center;gap:7px;margin-left:18px;padding:8px 14px;border-radius:999px;
     font-weight:800;font-size:14px;letter-spacing:.3px;position:relative;overflow:hidden;color:var(--muted);
     background:linear-gradient(135deg,rgba(139,145,184,.14),rgba(139,145,184,.04));border:1px solid rgba(139,145,184,.35);
-    transition:background .5s, border-color .5s, color .5s, box-shadow .5s}
+    transition:background .45s, border-color .45s, color .45s, box-shadow .45s, transform .3s cubic-bezier(.2,1.3,.4,1)}
   .phase-chip .phase-ico{font-size:18px;line-height:1}
-  .phase-chip .phase-count{font-size:12px;font-weight:700;opacity:.8;font-variant-numeric:tabular-nums;min-width:24px}
   .phase-chip.joker{background:linear-gradient(135deg,rgba(167,139,250,.24),rgba(124,58,237,.08));border-color:rgba(167,139,250,.65);color:#dcd2ff;box-shadow:0 0 18px rgba(167,139,250,.28)}
   .phase-chip.cleanup{background:linear-gradient(135deg,rgba(248,113,113,.22),rgba(248,113,113,.06));border-color:rgba(248,113,113,.6);color:#ffd9d9;box-shadow:0 0 18px rgba(248,113,113,.22)}
   .phase-chip.endgame{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(251,191,36,.06));border-color:rgba(251,191,36,.6);color:#ffedc2;box-shadow:0 0 18px rgba(251,191,36,.2)}
   .phase-chip.over{opacity:.7}
-  .phase-chip.pop{animation:phasePop .6s cubic-bezier(.2,1.6,.4,1)}
-  @keyframes phasePop{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+  .phase-chip.big{transform:scale(1.75);z-index:30}
   .phase-chip::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;transform:skewX(-22deg);
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);opacity:0}
-  .phase-chip.pop::after{animation:phaseShine .7s ease .1s}
+  .phase-chip.shine::after{animation:phaseShine .7s ease .1s}
   @keyframes phaseShine{0%{left:-70%;opacity:1}100%{left:130%;opacity:0}}
 
   /* targets */
@@ -262,18 +260,6 @@
   }
   #hint.show{opacity:1}
 
-  /* phase toasts (🃏 joker / 🧹 cleanup / ⏱ endgame) */
-  #phaseToast{position:fixed;left:50%;top:20%;transform:translate(-50%,-50%) scale(.5);z-index:80;pointer-events:none;
-    font-weight:900;font-size:25px;padding:14px 26px;border-radius:16px;opacity:0;white-space:nowrap;
-    border:2px solid var(--muted);color:var(--text);background:rgba(24,28,52,.75);backdrop-filter:blur(4px)}
-  #phaseToast.joker{border-color:var(--violet);color:#e6dcff;background:linear-gradient(135deg,rgba(167,139,250,.18),rgba(124,58,237,.10));
-    text-shadow:0 0 14px rgba(167,139,250,.9);box-shadow:0 0 34px rgba(167,139,250,.45), inset 0 0 18px rgba(167,139,250,.18)}
-  #phaseToast.cleanup{border-color:var(--danger);color:#ffe1e1;background:linear-gradient(135deg,rgba(248,113,113,.18),rgba(190,30,30,.10));
-    text-shadow:0 0 14px rgba(248,113,113,.85);box-shadow:0 0 34px rgba(248,113,113,.4), inset 0 0 18px rgba(248,113,113,.16)}
-  #phaseToast.endgame{border-color:var(--yellow);color:#ffedc2;background:linear-gradient(135deg,rgba(251,191,36,.18),rgba(180,120,10,.10));
-    text-shadow:0 0 14px rgba(251,191,36,.85);box-shadow:0 0 34px rgba(251,191,36,.4), inset 0 0 18px rgba(251,191,36,.16)}
-  #phaseToast.show{animation:phaseIn 2.1s cubic-bezier(.2,1.4,.3,1) forwards}
-  @keyframes phaseIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.07)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
 
   .rules{color:var(--muted);font-size:12.5px;line-height:1.7;margin-top:22px;border-top:1px solid var(--line);padding-top:14px}
   .rules-toggle{background:none;border:none;color:var(--text);font-weight:700;font-size:14px;cursor:pointer;padding:0;display:flex;align-items:center;gap:8px}
@@ -317,18 +303,18 @@
   body.mobile #bounty{ font-size:15px; padding:7px 13px; }
   body.mobile .bounty-badge{ width:20px; height:20px; font-size:12px; top:-9px; left:5px; }
   /* ===== Mobile layout (toggled by the button, top-right) ===== */
-  body.mobile{ padding:8px; padding-bottom:300px; }   /* room for the fixed calculator */
+  body.mobile{ padding:6px; padding-bottom:calc(272px + env(safe-area-inset-bottom)); }   /* room for the fixed calculator */
   body.mobile.ended{ padding-bottom:12px; }
   body.mobile .wrap{ max-width:100%; }
-  body.mobile h1{ font-size:19px; padding-bottom:7px; }
-  body.mobile h1::after{ width:42px; height:2px; }
-  body.mobile .conn{ font-size:10px; top:3px; }
+  body.mobile h1{ font-size:15px; padding-bottom:2px; }
+  body.mobile h1::after{ display:none; }
+  body.mobile .conn{ font-size:9px; top:2px; }
   body.mobile .topbtns{ top:0; }
-  body.mobile .topbtn{ padding:5px 8px; font-size:11px; }
+  body.mobile .topbtn{ padding:4px 7px; font-size:10px; }
 
   /* flatten the nested columns into one stack, then sequence the pieces */
-  body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:8px; margin-top:4px; }
-  body.mobile .layout{ display:flex; flex-direction:column; align-items:stretch; gap:10px; width:100%; min-width:0; flex:0 0 auto; order:1; }
+  body.mobile .stage{ display:flex; flex-direction:column; align-items:stretch; gap:6px; margin-top:2px; }
+  body.mobile .layout{ display:flex; flex-direction:column; align-items:stretch; gap:6px; width:100%; min-width:0; flex:0 0 auto; order:1; }
   body.mobile .main{ display:block; width:100%; min-width:0; flex:0 0 auto; position:static; }
   body.mobile .side{ display:block; width:100%; min-width:0; max-width:none; flex:0 0 auto; position:static; top:auto; }
   body.mobile #diceCard{ margin-bottom:0 !important; }
@@ -336,62 +322,61 @@
   body.mobile .rules{ order:3; }       /* 'How it works' relocated below the board column (see setLayout) */
 
   /* the calculator becomes a fixed bottom sheet — always reachable, never overlaps (body reserves space) */
-  body.mobile #solver{ position:fixed; left:8px; right:8px; bottom:calc(6px + env(safe-area-inset-bottom));
+  body.mobile #solver{ position:fixed; left:6px; right:6px; bottom:calc(4px + env(safe-area-inset-bottom));
     z-index:45; margin:0; box-shadow:0 -8px 34px rgba(0,0,0,.6); }
   body.mobile.ended #solver{ display:none; }   /* at round end, free the screen to browse solutions */
   body.mobile .calc-timer{ display:block; }
 
-  body.mobile .card{ padding:8px; border-radius:11px; }
-  body.mobile .stats{ gap:8px; margin-bottom:0; padding:8px; }
-  body.mobile .stat b{ font-size:19px; }
-  body.mobile .dice-strip{ padding:2px 0; }
-  body.mobile .phase-chip{ margin-left:8px; padding:5px 10px; font-size:11px; gap:5px; }
-  body.mobile .phase-chip .phase-ico{ font-size:13px; }
-  body.mobile .phase-chip .phase-count{ font-size:9px; min-width:18px; }
-  body.mobile .scores{ gap:10px; min-height:24px; }
-  body.mobile .scnum{ font-size:18px; }
-  body.mobile .newgame-wrap{ gap:6px; }
-  body.mobile .newgame-wrap button{ padding:7px 9px; font-size:12px; border-radius:8px; }
+  body.mobile .card{ padding:6px; border-radius:10px; }
+  body.mobile .stats{ gap:6px; margin-bottom:0; padding:6px; }
+  body.mobile .stat b{ font-size:17px; }
+  body.mobile .dice-strip{ padding:0; }
+  body.mobile .phase-chip{ margin-left:6px; padding:4px 9px; font-size:10px; gap:4px; }
+  body.mobile .phase-chip .phase-ico{ font-size:12px; }
+  body.mobile .scores{ gap:8px; min-height:20px; }
+  body.mobile .scnum{ font-size:16px; }
+  body.mobile .newgame-wrap{ gap:5px; }
+  body.mobile .newgame-wrap button{ padding:6px 8px; font-size:11px; border-radius:7px; }
 
-  body.mobile .dice-row{ gap:9px; }
-  body.mobile .dice-emoji{ font-size:30px; }
-  body.mobile .die{ width:38px; height:38px; font-size:17px; border-radius:8px; box-shadow:0 3px 9px rgba(0,0,0,.3); }
+  body.mobile .dice-row{ gap:7px; }
+  body.mobile .dice-emoji{ font-size:22px; }
+  body.mobile .die{ width:34px; height:34px; font-size:15px; border-radius:7px; box-shadow:0 3px 9px rgba(0,0,0,.3); }
 
-  body.mobile .grid{ grid-template-columns:repeat(3,1fr); gap:7px; margin-top:0; }
-  body.mobile .pair{ padding:4px; gap:4px; border-radius:11px; }
-  body.mobile .target{ font-size:17px; border-radius:9px; }
-  body.mobile .target .tick{ font-size:12px; top:1px; right:3px; }
-  body.mobile .target .shield{ font-size:11px; top:1px; left:2px; }
-  body.mobile .target .cdbadge{ font-size:11px; bottom:1px; left:2px; }
-  body.mobile .target .protcount{ font-size:10px; padding:0 4px; line-height:1.5; }
-  body.mobile .lockbadge{ width:20px; height:20px; font-size:11px; top:-9px; }
+  body.mobile .grid{ grid-template-columns:repeat(3,1fr); gap:5px; margin-top:0; }
+  body.mobile .pair{ padding:3px; gap:3px; border-radius:9px; }
+  body.mobile .target{ aspect-ratio:auto; height:42px; font-size:15px; border-radius:8px; }   /* shorter tiles = whole board on one screen */
+  body.mobile .target .tick{ font-size:11px; top:0; right:3px; }
+  body.mobile .target .shield{ font-size:10px; top:0; left:2px; }
+  body.mobile .target .cdbadge{ font-size:10px; bottom:0; left:2px; }
+  body.mobile .target .protcount{ font-size:9px; padding:0 4px; line-height:1.5; bottom:1px; }
+  body.mobile .lockbadge{ width:18px; height:18px; font-size:10px; top:-8px; }
 
-  body.mobile .solver{ padding:9px; }
-  body.mobile .calc-head{ margin-bottom:4px; align-items:center; }
-  body.mobile .calc-sub{ font-size:10px; letter-spacing:1px; }
-  body.mobile .bigtarget{ font-size:28px; }
-  body.mobile .calc-timer{ font-size:19px; }
-  body.mobile #equation{ padding:7px 11px; font-size:16px; border-radius:10px; }
-  body.mobile .calcgrid{ gap:6px; margin:6px 0 2px; }
-  body.mobile .cbtn{ padding:9px 0; font-size:18px; border-radius:9px; }
-  body.mobile .cbtn.num{ font-size:19px; }
-  body.mobile .cbtn.word{ font-size:13px; }
-  body.mobile .cbtn.op{ font-size:24px; padding:6px 0; }
-  body.mobile .calc-total{ font-size:12px; margin:2px 2px 4px; }
-  body.mobile .calc-total b{ font-size:17px; }
-  body.mobile .calc-actions{ gap:6px; }
-  body.mobile .calc-actions button{ padding:8px 0; font-size:13px; }
-  body.mobile .msg{ font-size:12px; margin-top:3px; min-height:15px; }
+  body.mobile .solver{ padding:7px; }
+  body.mobile .calc-head{ margin-bottom:2px; align-items:center; }
+  body.mobile .calc-sub{ font-size:9px; letter-spacing:1px; }
+  body.mobile .bigtarget{ font-size:22px; }
+  body.mobile .calc-timer{ font-size:16px; }
+  body.mobile #equation{ padding:5px 9px; font-size:14px; border-radius:8px; }
+  body.mobile .calcgrid{ gap:4px; margin:4px 0 2px; }
+  body.mobile .cbtn{ padding:7px 0; font-size:15px; border-radius:8px; }
+  body.mobile .cbtn.num{ font-size:16px; }
+  body.mobile .cbtn.word{ font-size:11px; }
+  body.mobile .cbtn.op{ font-size:20px; padding:4px 0; }
+  body.mobile .calc-total{ font-size:10px; margin:1px 2px 2px; }
+  body.mobile .calc-total b{ font-size:13px; }
+  body.mobile .calc-actions{ gap:4px; }
+  body.mobile .calc-actions button{ padding:6px 0; font-size:12px; }
+  body.mobile .msg{ font-size:11px; margin-top:2px; min-height:13px; }
 
   body.mobile .mutations{ display:flex; justify-content:center; padding:5px 12px; gap:16px; margin-top:0; }
   body.mobile .mutemote{ font-size:19px; }
   body.mobile .mut-row input{ width:16px; height:16px; }
 
-  body.mobile .roster{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:8px 10px; }
+  body.mobile .roster{ flex-direction:row; flex-wrap:wrap; justify-content:center; gap:6px 9px; }
   body.mobile .rrow{ gap:4px; }
-  body.mobile .rinit{ width:30px; font-size:11px; padding:4px 0; }
-  body.mobile .rswatch{ width:24px; height:24px; font-size:13px; }
-  body.mobile .rrecent{ min-width:14px; font-size:13px; }
+  body.mobile .rinit{ width:28px; font-size:10px; padding:3px 0; }
+  body.mobile .rswatch{ width:22px; height:22px; font-size:12px; }
+  body.mobile .rrecent{ min-width:13px; font-size:12px; }
 
   body.mobile .win{ padding:14px; }
   body.mobile .win b{ font-size:20px; }
@@ -400,7 +385,6 @@
   body.mobile #tip{ font-size:15px; padding:9px 12px; }
   body.mobile #tip .tipline{ font-size:14px; }
   body.mobile #hint{ font-size:16px; padding:7px 11px; }
-  body.mobile #phaseToast{ font-size:18px; padding:10px 18px; }
   body.mobile .die.joker::after{ font-size:11px; top:-8px; right:-5px; }
   body.mobile .ptsfloat{ font-size:16px; }
 
@@ -442,7 +426,7 @@
               <div class="die">?</div>
             </div>
             <span class="dice-emoji">🎲</span>
-            <div class="phase-chip" id="phaseChip"><span class="phase-ico" id="phaseIco">🍦</span><span id="phaseName">Vanilla</span><span class="phase-count" id="phaseCount"></span></div>
+            <div class="phase-chip" id="phaseChip"><span class="phase-ico" id="phaseIco">🍦</span><span id="phaseName">Vanilla</span></div>
           </div>
         </div>
 
@@ -464,10 +448,10 @@
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
-            • The round flows through <b>phases</b> (see the chip next to the dice): 🍦 <b>Vanilla</b> above 1:10 → <b style="color:var(--violet)">🃏 Joker</b> from 1:10 to 0:30 (a 4th die joins — use <b>any 3 or all 4</b> dice, each once) → <b style="color:var(--danger)">🧹 Cleanup</b> below 0:30 (impossible tiles get crossed). Phases never rewind, even when time bonuses push the clock back up.<br>
+            • The round flows through <b>phases</b> (see the chip next to the dice): 🍦 <b>Vanilla</b> above 1:00 → <b style="color:var(--violet)">🃏 Joker</b> from 1:00 to 0:30 (a 4th die joins — all three dice still required, the joker is an <b>optional extra</b>) → <b style="color:var(--danger)">🧹 Cleanup</b> below 0:30 (impossible tiles get crossed). Phases never rewind, even when time bonuses push the clock back up.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
             • You can select <b>any</b> tile at any time — even protected or cooling-down ones — to prewrite an equation, then press Check the moment it unlocks (countdowns show right on the tiles). Missing brackets are fixed on both ends (<code>4+5)*2</code> works).<br>
-            • Version: <b>Špeezy 3.2</b>
+            • Version: <b>Špeezy 3.3</b>
           </div>
         </div>
       </div>
@@ -500,7 +484,7 @@
           <label class="mut-row" title="Bounty — one pair (both halves solvable) is marked gold; its tiles pay 2 and locking the whole pair pays 4 (applies next round)">
             <input type="checkbox" id="mutBounty" checked><span class="mutemote">💰</span>
           </label>
-          <label class="mut-row" title="Joker phase — from 1:10 to 0:30 a 4th die (1–6) joins; equations may use any 3 or all 4 dice, each once (applies next round)">
+          <label class="mut-row" title="Joker phase — from 1:00 to 0:30 a 4th die (1–6) joins; all three dice still required, the joker is an optional extra (applies next round)">
             <input type="checkbox" id="mutJoker" checked><span class="mutemote">🃏</span>
           </label>
         </div>
@@ -512,7 +496,6 @@
 <div id="tip"></div>
 <div id="hint"></div>
 <div id="bounty"></div>
-<div id="phaseToast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/game.js"></script>
@@ -681,7 +664,7 @@ function onState(st){
     myStreak=0; lastOkAt=0;
     setMsg('',''); $('equation').value=''; updatePreview();
     $('tip').classList.remove('show','cheat');
-    hideHint(); hideBounty(); hidePhaseToast();
+    hideHint(); hideBounty();
     buildBoard();
   }
   renderDice();
@@ -710,32 +693,31 @@ function updateMood(){
   sc.classList.toggle('urgent', !G.ended && G.timeLeft<=30);
   updatePhaseChip();
 }
-/* ---------- phase chip (next to the dice) ---------- */
-let lastPhaseId='';
+/* ---------- phase chip (next to the dice) ----------
+   On a phase change the chip itself grows big for ~half a second, the text swaps
+   while it's huge, then it settles back down — no separate toast. */
+let lastPhaseId='', morphT1=null, morphT2=null;
 function phaseInfo(){
-  if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla',count:''};
-  if(G.ended) return {id:'over',ico:'🏁',name:'Round over',count:''};
+  if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla'};
+  if(G.ended) return {id:'over',ico:'🏁',name:'Round over'};
   const ph=G.phase||0;
-  if(ph===1) return {id:'joker',ico:'🃏',name:'Joker',count:Math.max(0,(G.timeLeft||0)-(G.phaseNext||30))+'s'};
-  if(ph>=2) return G.cleanupPhase ? {id:'cleanup',ico:'🧹',name:'Cleanup',count:''}
-                                  : {id:'endgame',ico:'⏱',name:'Endgame',count:''};
-  return {id:'vanilla',ico:'🍦',name:'Vanilla',count:Math.max(0,(G.timeLeft||0)-(G.phaseNext||30))+'s'};
+  if(ph===1) return {id:'joker',ico:'🃏',name:'Joker'};
+  if(ph>=2) return G.cleanupPhase ? {id:'cleanup',ico:'🧹',name:'Cleanup'}
+                                  : {id:'endgame',ico:'⏱',name:'Endgame'};
+  return {id:'vanilla',ico:'🍦',name:'Vanilla'};
 }
+function setChipText(inf){ $('phaseIco').textContent=inf.ico; $('phaseName').textContent=inf.name; }
 function updatePhaseChip(){
   const chip=$('phaseChip'); if(!chip) return;
   const inf=phaseInfo();
-  $('phaseIco').textContent=inf.ico;
-  $('phaseName').textContent=inf.name;
-  $('phaseCount').textContent=inf.count;
-  if(inf.id!==lastPhaseId){
-    const first=lastPhaseId==='';
-    lastPhaseId=inf.id;
-    chip.className='phase-chip '+inf.id;
-    if(!first && !RM){
-      chip.classList.add('pop');
-      setTimeout(()=>{ chip.classList.remove('pop'); },750);
-    }
-  }
+  if(inf.id===lastPhaseId) return;
+  const first=lastPhaseId==='';
+  lastPhaseId=inf.id;
+  clearTimeout(morphT1); clearTimeout(morphT2);
+  if(first || RM){ setChipText(inf); chip.className='phase-chip '+inf.id; return; }
+  chip.classList.add('big');                                                   // grow…
+  morphT1=setTimeout(()=>{ setChipText(inf); chip.className='phase-chip '+inf.id+' big shine'; },260);  // …swap while huge
+  morphT2=setTimeout(()=>{ chip.classList.remove('big'); },820);               // …settle back down
 }
 
 /* ---------- roster (left): built once, updated in place so inputs keep focus ---------- */
@@ -1063,25 +1045,14 @@ function floatPts(pi,text,color){
 }
 
 /* ---------- phase transitions (🃏 joker die / 🧹 cleanup / ⏱ endgame) ---------- */
-let phaseToastTimer=null;
-function showPhaseToast(kind, text){
-  const t=$('phaseToast');
-  t.className=kind; t.textContent=text;
-  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
-  clearTimeout(phaseToastTimer); phaseToastTimer=setTimeout(()=>t.classList.remove('show'),2300);
-}
-function hidePhaseToast(){ clearTimeout(phaseToastTimer); $('phaseToast').classList.remove('show'); }
 function jokerStrike(value){
   if(!G||G.ended) return;
   G.phase=1; if(value!=null) G.joker=value;
-  showPhaseToast('joker','🃏 Joker phase! Any 3 — or all 4 dice');
-  soundJoker(); renderJoker(); updateMood();
+  soundJoker(); renderJoker(); updateMood();   // the chip morph announces the phase
 }
 function phaseStrike(id){
   if(!G||G.ended) return;
   G.phase=2; G.joker=null;
-  if(id==='cleanup') showPhaseToast('cleanup','🧹 Cleanup phase! Impossible tiles get crossed');
-  else showPhaseToast('endgame','⏱ Endgame!');
   soundSweep(); renderJoker(); updateMood();
 }
 function renderJoker(){
