@@ -263,6 +263,7 @@ function solveAll(dice){
 const D3=[5,5,10,10,20,20];
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
 const JOKER_AT=60;   // 🃏 joker phase runs from 1:00 (timeLeft 60) down to the cleanup mark at 0:30 (CROSS_AT)
+const SETTLE_GRACE=5;   // when the joker expires on a dead board, wind down for this many seconds instead of ending instantly
 const SEAT_GRACE=30000;   // hold a player's color this long after they drop, so a quick reconnect reclaims it
 const POOL=[
   [12,6],[64,16],[72,9],[36,4],[28,4],
@@ -369,6 +370,7 @@ class Game {
     this.bountyPair = -1;
     this.phase = 0;          // 0 vanilla · 1 joker · 2 cleanup/endgame — monotonic, never goes back
     this.jokerVal = null;
+    this.settleIn = 0;       // >0 = "nothing left to solve" wind-down countdown (seconds)
     if(this.mutationsActive.bounty){
       const map=this._solveMap();
       const cands=[];
@@ -387,6 +389,11 @@ class Game {
     if(this.ended) return;
     this.timeLeft--;
     let full=false;   // most seconds only the clock moves → send the light 'tick'; real changes get full state
+    if(this.settleIn>0){                               // graceful "nothing left" wind-down
+      this.settleIn--;
+      if(this.settleIn<=0){ this.endRound('settled'); return; }
+      full=true;
+    }
     if(this.phase<1 && this.mutationsActive.joker && this.timeLeft<=JOKER_AT && this.timeLeft>CROSS_AT){
       this.phase=1;                                    // 🃏 joker phase — 4th die until the 0:30 mark
       this.jokerVal=1+Math.floor(Math.random()*6);
@@ -397,7 +404,10 @@ class Game {
       this.phase=2; this.jokerVal=null;                // 🧹 cleanup / ⏱ endgame — joker off for good, no rewinds
       if(this.mutationsActive.prematureCross && !this.crossComputed){ this._computeCrosses(); this.crossComputed=true; }
       this.onFx({type:'phase', id: this.mutationsActive.prematureCross ? 'cleanup' : 'endgame'});
-      if(this.roundDecided()){ this.endRound('settled'); return; }   // the joker chance is gone — settle now if nothing is left
+      if(this.roundDecided()){                          // the joker chance is gone and nothing is left…
+        this.settleIn=SETTLE_GRACE;                     // …but don't slam the door — give a visible wind-down
+        this.onFx({type:'settling', secs:SETTLE_GRACE});
+      }
       full=true;
     }
     if(this.mutationsActive.lastMinuteHints && this.timeLeft===HINT_AT){ this._fireHint(); }
@@ -478,6 +488,7 @@ class Game {
               : both   ? '✓ Correct! +'+pts+'  (split pair)'
               : '✓ Correct! +'+pts+' — lock it by taking its partner in your color.';
     this.onFx({type:'claim', color, pi, ti, locked, isSteal, bounty:!!t.bounty, pts});
+    this.settleIn=0;                                   // the board changed — cancel any pending wind-down
     if(this.boardSettled()) this.endRound('locked');
     else if(!(this.phase<2 && this.mutationsActive.joker) && this.roundDecided()) this.endRound('settled');   // while a joker phase is active or still coming, new claims may become possible
     this.onChange();
@@ -555,6 +566,7 @@ class Game {
       ended:this.ended, cleared:this.cleared, endReason:this.endReason||null,
       roundAge: now-(this.roundStart||now),               // lets the client time round-relative FX (bounty pulse) precisely
       phase:this.phase,
+      settleIn:this.settleIn,
       phaseNext: this.phase===0 ? (this.mutationsActive.joker?JOKER_AT:CROSS_AT) : (this.phase===1 ? CROSS_AT : 0),
       cleanupPhase: !!this.mutationsActive.prematureCross,
       joker:(this.phase===1 ? this.jokerVal : null),

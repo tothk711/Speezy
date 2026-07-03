@@ -100,6 +100,8 @@
   @keyframes dieSettle{0%{transform:scale(1.25)}100%{transform:scale(1)}}
   .die.joker{border:1px solid var(--violet);box-shadow:0 0 0 1px rgba(167,139,250,.45),0 0 16px rgba(167,139,250,.35)}
   .die.joker::after{content:"🃏";position:absolute;top:-11px;right:-9px;font-size:16px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+  .die.joker.expiring{animation:jokerBlink 1s ease-in-out infinite}   /* the joker is about to vanish */
+  @keyframes jokerBlink{0%,100%{opacity:1}50%{opacity:.45}}
   .die.fadeout{animation:dieFade .4s ease forwards}
   @keyframes dieFade{to{opacity:0;transform:scale(.55)}}
   .dice-strip{padding:6px 0 4px;margin-bottom:12px}   /* the dice float free — no box; your color tints the dice */
@@ -110,6 +112,11 @@
     background:linear-gradient(135deg,rgba(139,145,184,.14),rgba(139,145,184,.04));border:1px solid rgba(139,145,184,.35);
     transition:background .45s, border-color .45s, color .45s, box-shadow .45s, transform .3s cubic-bezier(.2,1.3,.4,1)}
   .phase-chip .phase-ico{font-size:18px;line-height:1}
+  .phase-chip .phase-count{font-size:12px;font-weight:800;opacity:.9;font-variant-numeric:tabular-nums;display:none}
+  .phase-chip.warn .phase-count{display:inline}
+  .phase-chip.warn{animation:chipWarn 1s ease-in-out infinite}
+  @keyframes chipWarn{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+  .phase-chip.settling{background:linear-gradient(135deg,rgba(251,146,60,.24),rgba(251,146,60,.07));border-color:rgba(251,146,60,.65);color:#ffdcc2;box-shadow:0 0 18px rgba(251,146,60,.25)}
   .phase-chip.joker{background:linear-gradient(135deg,rgba(167,139,250,.24),rgba(124,58,237,.08));border-color:rgba(167,139,250,.65);color:#dcd2ff;box-shadow:0 0 18px rgba(167,139,250,.28)}
   .phase-chip.cleanup{background:linear-gradient(135deg,rgba(248,113,113,.22),rgba(248,113,113,.06));border-color:rgba(248,113,113,.6);color:#ffd9d9;box-shadow:0 0 18px rgba(248,113,113,.22)}
   .phase-chip.endgame{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(251,191,36,.06));border-color:rgba(251,191,36,.6);color:#ffedc2;box-shadow:0 0 18px rgba(251,191,36,.2)}
@@ -333,6 +340,7 @@
   body.mobile .dice-strip{ padding:0; }
   body.mobile .phase-chip{ margin-left:6px; padding:4px 9px; font-size:10px; gap:4px; }
   body.mobile .phase-chip .phase-ico{ font-size:12px; }
+  body.mobile .phase-chip .phase-count{ font-size:9px; }
   body.mobile .scores{ gap:8px; min-height:20px; }
   body.mobile .scnum{ font-size:16px; }
   body.mobile .newgame-wrap{ gap:5px; }
@@ -426,7 +434,7 @@
               <div class="die">?</div>
             </div>
             <span class="dice-emoji">🎲</span>
-            <div class="phase-chip" id="phaseChip"><span class="phase-ico" id="phaseIco">🍦</span><span id="phaseName">Vanilla</span></div>
+            <div class="phase-chip" id="phaseChip"><span class="phase-ico" id="phaseIco">🍦</span><span id="phaseName">Vanilla</span><span class="phase-count" id="phaseCount"></span></div>
           </div>
         </div>
 
@@ -448,10 +456,8 @@
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
-            • The round flows through <b>phases</b> (see the chip next to the dice): 🍦 <b>Vanilla</b> above 1:00 → <b style="color:var(--violet)">🃏 Joker</b> from 1:00 to 0:30 (a 4th die joins — all three dice still required, the joker is an <b>optional extra</b>) → <b style="color:var(--danger)">🧹 Cleanup</b> below 0:30 (impossible tiles get crossed). Phases never rewind, even when time bonuses push the clock back up.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • You can select <b>any</b> tile at any time — even protected or cooling-down ones — to prewrite an equation, then press Check the moment it unlocks (countdowns show right on the tiles). Missing brackets are fixed on both ends (<code>4+5)*2</code> works).<br>
-            • Version: <b>Špeezy 3.3</b>
+            • Version: <b>Špeezy 3.4</b>
           </div>
         </div>
       </div>
@@ -607,6 +613,7 @@ socket.on('fx', f=>{ try{
   if(f.type==='hint'){ showHint(f.pi,f.ti,f.partial); return; }
   if(f.type==='joker'){ jokerStrike(f.value); return; }
   if(f.type==='phase'){ phaseStrike(f.id); return; }
+  if(f.type==='settling'){ if(G && !G.ended){ G.settleIn=f.secs||5; updateMood(); } return; }
   if(f.type!=='claim') return;
   const mine = f.color===myColor;
   if(mine){ const n=Date.now(); myStreak = (n-lastOkAt<12000) ? myStreak+1 : 1; lastOkAt=n; }
@@ -657,6 +664,7 @@ function onState(st){
   const newRound = st.roundId!==lastRoundId;
   const prevT = G ? G.timeLeft : null;
   const wasEnded = G ? !!G.ended : false;
+  const prevSettle = G ? (G.settleIn||0) : 0;
   G=st;
   pulseUntil = now - (st.roundAge||0) + 20000;   // bounty ring pulses for the first 20s of the round
   if(newRound){
@@ -671,6 +679,7 @@ function onState(st){
   renderJoker();
   updateTimer();
   if(!newRound && prevT!=null && !st.ended && st.timeLeft>prevT){ flashTime(st.timeLeft-prevT); soundZip(); }
+  if(!newRound && !st.ended && (st.settleIn||0)>0 && (st.settleIn||0)<prevSettle) soundTick();   // wind-down heartbeat
   renderScores();
   renderPalette();
   const mp=$('mutPremature'); if(mp && document.activeElement!==mp) mp.checked = !!(st.mutations && st.mutations.prematureCross);
@@ -698,25 +707,33 @@ function updateMood(){
    while it's huge, then it settles back down — no separate toast. */
 let lastPhaseId='', morphT1=null, morphT2=null;
 function phaseInfo(){
-  if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla'};
-  if(G.ended) return {id:'over',ico:'🏁',name:'Round over'};
+  if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla',warn:''};
+  if(G.ended) return {id:'over',ico:'🏁',name:'Round over',warn:''};
+  if((G.settleIn||0)>0) return {id:'settling',ico:'🏁',name:'Ending',warn:G.settleIn+'s'};   // nothing left — wind-down
   const ph=G.phase||0;
-  if(ph===1) return {id:'joker',ico:'🃏',name:'Joker'};
-  if(ph>=2) return G.cleanupPhase ? {id:'cleanup',ico:'🧹',name:'Cleanup'}
-                                  : {id:'endgame',ico:'⏱',name:'Endgame'};
-  return {id:'vanilla',ico:'🍦',name:'Vanilla'};
+  const toNext=(ph<2 && G.phaseNext) ? (G.timeLeft||0)-G.phaseNext : 999;
+  const warn=(toNext>=0 && toNext<=10) ? toNext+'s' : '';   // countdown only for the last 10s of a phase
+  if(ph===1) return {id:'joker',ico:'🃏',name:'Joker',warn};
+  if(ph>=2) return G.cleanupPhase ? {id:'cleanup',ico:'🧹',name:'Cleanup',warn:''}
+                                  : {id:'endgame',ico:'⏱',name:'Endgame',warn:''};
+  return {id:'vanilla',ico:'🍦',name:'Vanilla',warn};
 }
 function setChipText(inf){ $('phaseIco').textContent=inf.ico; $('phaseName').textContent=inf.name; }
 function updatePhaseChip(){
   const chip=$('phaseChip'); if(!chip) return;
   const inf=phaseInfo();
+  $('phaseCount').textContent=inf.warn||'';
+  chip.classList.toggle('warn', !!inf.warn);
+  const jd=document.querySelector('#diceRow .die.joker');   // blink the joker die in its final seconds
+  if(jd) jd.classList.toggle('expiring', !!inf.warn && !!G && G.phase===1 && !G.ended);
   if(inf.id===lastPhaseId) return;
   const first=lastPhaseId==='';
   lastPhaseId=inf.id;
   clearTimeout(morphT1); clearTimeout(morphT2);
-  if(first || RM){ setChipText(inf); chip.className='phase-chip '+inf.id; return; }
+  if(first || RM){ setChipText(inf); chip.className='phase-chip '+inf.id+(inf.warn?' warn':''); return; }
   chip.classList.add('big');                                                   // grow…
-  morphT1=setTimeout(()=>{ setChipText(inf); chip.className='phase-chip '+inf.id+' big shine'; },260);  // …swap while huge
+  morphT1=setTimeout(()=>{ const now=phaseInfo(); setChipText(now); $('phaseCount').textContent=now.warn||'';
+    chip.className='phase-chip '+now.id+' big shine'+(now.warn?' warn':''); },260);  // …swap while huge
   morphT2=setTimeout(()=>{ chip.classList.remove('big'); },820);               // …settle back down
 }
 

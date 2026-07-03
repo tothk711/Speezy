@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v3.3)
+# Špeezy — Multiplayer (v3.4)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,18 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 3.4
+- **Last-10-seconds phase warning.** The phase chip shows a countdown only for
+  the final 10s of a phase (pulsing gently), and the joker die blinks when it's
+  about to vanish. No full-time clock — just a heads-up when it matters.
+- **No more abrupt endings.** When the joker phase expires and nothing is left
+  to solve, the round no longer slams shut instantly: the chip morphs to
+  "🏁 Ending · 5s" and winds down with soft ticks before settling. A successful
+  claim cancels the wind-down; settles caused by your own final claim are still
+  instant.
+- **"How it works" trimmed:** the phases bullet and the prewrite/brackets
+  bullet are gone (the game teaches these by playing).
 
 ## What's new in 3.3
 - **Phase announcements are calmer:** the big center-screen toast is gone. The
