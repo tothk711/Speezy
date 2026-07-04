@@ -110,18 +110,22 @@
   .phase-chip{display:inline-flex;align-items:center;gap:7px;margin-left:18px;padding:8px 14px;border-radius:999px;
     font-weight:800;font-size:14px;letter-spacing:.3px;position:relative;overflow:hidden;color:var(--muted);
     background:linear-gradient(135deg,rgba(139,145,184,.14),rgba(139,145,184,.04));border:1px solid rgba(139,145,184,.35);
-    transition:background .45s, border-color .45s, color .45s, box-shadow .45s, transform .3s cubic-bezier(.2,1.3,.4,1)}
+    white-space:nowrap;
+    transition:background .45s, border-color .45s, color .45s, box-shadow .45s, transform .45s ease-in-out, width .35s ease}
   .phase-chip .phase-ico{font-size:18px;line-height:1}
-  .phase-chip .phase-count{font-size:12px;font-weight:800;opacity:.9;font-variant-numeric:tabular-nums;display:none}
-  .phase-chip.warn .phase-count{display:inline}
-  .phase-chip.warn{animation:chipWarn 1s ease-in-out infinite}
-  @keyframes chipWarn{0%,100%{filter:brightness(1)}50%{filter:brightness(1.4)}}
+  .phase-chip .phase-count{font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;
+    display:inline-block;width:26px;text-align:right;opacity:0;transition:opacity .3s ease}   /* slot is always reserved — the pill never resizes */
+  .phase-chip.warn .phase-count{opacity:.95}
+  .phase-chip.warn{animation:chipWarn 1.6s ease-in-out infinite}
+  @keyframes chipWarn{0%,100%{filter:brightness(1)}50%{filter:brightness(1.22)}}
   .phase-chip.settling{background:linear-gradient(135deg,rgba(251,146,60,.24),rgba(251,146,60,.07));border-color:rgba(251,146,60,.65);color:#ffdcc2;box-shadow:0 0 18px rgba(251,146,60,.25)}
   .phase-chip.joker{background:linear-gradient(135deg,rgba(167,139,250,.24),rgba(124,58,237,.08));border-color:rgba(167,139,250,.65);color:#dcd2ff;box-shadow:0 0 18px rgba(167,139,250,.28)}
   .phase-chip.cleanup{background:linear-gradient(135deg,rgba(248,113,113,.22),rgba(248,113,113,.06));border-color:rgba(248,113,113,.6);color:#ffd9d9;box-shadow:0 0 18px rgba(248,113,113,.22)}
   .phase-chip.endgame{background:linear-gradient(135deg,rgba(251,191,36,.22),rgba(251,191,36,.06));border-color:rgba(251,191,36,.6);color:#ffedc2;box-shadow:0 0 18px rgba(251,191,36,.2)}
   .phase-chip.over{opacity:.7}
-  .phase-chip.big{transform:scale(1.75);z-index:30}
+  .phase-chip.big{transform:scale(1.35);z-index:30}
+  .phase-chip .phase-ico, .phase-chip #phaseName{transition:opacity .28s ease}
+  .phase-chip.fading .phase-ico, .phase-chip.fading #phaseName{opacity:0}
   .phase-chip::after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:45%;transform:skewX(-22deg);
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);opacity:0}
   .phase-chip.shine::after{animation:phaseShine .7s ease .1s}
@@ -340,7 +344,7 @@
   body.mobile .dice-strip{ padding:0; }
   body.mobile .phase-chip{ margin-left:6px; padding:4px 9px; font-size:10px; gap:4px; }
   body.mobile .phase-chip .phase-ico{ font-size:12px; }
-  body.mobile .phase-chip .phase-count{ font-size:9px; }
+  body.mobile .phase-chip .phase-count{ font-size:9px; width:18px; }
   body.mobile .scores{ gap:8px; min-height:20px; }
   body.mobile .scnum{ font-size:16px; }
   body.mobile .newgame-wrap{ gap:5px; }
@@ -396,8 +400,8 @@
   body.mobile .die.joker::after{ font-size:11px; top:-8px; right:-5px; }
   body.mobile .ptsfloat{ font-size:16px; }
 
-  /* snappy taps: kill the 300ms delay / double-tap zoom on controls */
-  body.mobile button, body.mobile .target, body.mobile .rswatch, body.mobile .cbtn, body.mobile .rinit{ touch-action:manipulation; }
+  /* kill double-tap zoom everywhere in the mobile layout (pinch is blocked in JS via gesture events) */
+  body.mobile, body.mobile *{ touch-action:manipulation; }
 </style>
 </head>
 <body>
@@ -457,7 +461,7 @@
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 3.4</b>
+            • Version: <b>Špeezy 3.5</b>
           </div>
         </div>
       </div>
@@ -705,7 +709,7 @@ function updateMood(){
 /* ---------- phase chip (next to the dice) ----------
    On a phase change the chip itself grows big for ~half a second, the text swaps
    while it's huge, then it settles back down — no separate toast. */
-let lastPhaseId='', morphT1=null, morphT2=null;
+let lastPhaseId='', morphT1=null, morphT2=null, morphT3=null;
 function phaseInfo(){
   if(!G) return {id:'vanilla',ico:'🍦',name:'Vanilla',warn:''};
   if(G.ended) return {id:'over',ico:'🏁',name:'Round over',warn:''};
@@ -729,12 +733,25 @@ function updatePhaseChip(){
   if(inf.id===lastPhaseId) return;
   const first=lastPhaseId==='';
   lastPhaseId=inf.id;
-  clearTimeout(morphT1); clearTimeout(morphT2);
-  if(first || RM){ setChipText(inf); chip.className='phase-chip '+inf.id+(inf.warn?' warn':''); return; }
-  chip.classList.add('big');                                                   // grow…
-  morphT1=setTimeout(()=>{ const now=phaseInfo(); setChipText(now); $('phaseCount').textContent=now.warn||'';
-    chip.className='phase-chip '+now.id+' big shine'+(now.warn?' warn':''); },260);  // …swap while huge
-  morphT2=setTimeout(()=>{ chip.classList.remove('big'); },820);               // …settle back down
+  clearTimeout(morphT1); clearTimeout(morphT2); clearTimeout(morphT3);
+  if(first || RM){ setChipText(inf); chip.className='phase-chip '+inf.id+(inf.warn?' warn':''); chip.style.width=''; return; }
+  /* gentle morph: lock width → grow + fade label out → swap invisibly → glide width + fade back in → settle + shine */
+  chip.style.width=chip.offsetWidth+'px';
+  chip.classList.add('big','fading');
+  morphT1=setTimeout(()=>{
+    const now=phaseInfo();
+    setChipText(now);
+    $('phaseCount').textContent=now.warn||'';
+    chip.className='phase-chip '+now.id+' big fading'+(now.warn?' warn':'');
+    const w0=chip.style.width;
+    chip.style.width='auto';
+    const w1=chip.offsetWidth+'px';                     // new natural width (offsetWidth ignores the scale)
+    chip.style.width=w0; void chip.offsetWidth;
+    chip.style.width=w1;                                // pill glides to its new size
+    chip.classList.remove('fading');                    // label fades back in
+  },320);
+  morphT2=setTimeout(()=>{ chip.classList.remove('big'); chip.classList.add('shine'); },950);
+  morphT3=setTimeout(()=>{ chip.style.width=''; chip.classList.remove('shine'); },1550);
 }
 
 /* ---------- roster (left): built once, updated in place so inputs keep focus ---------- */
@@ -1296,8 +1313,18 @@ function applyEquationMode(){
   if(document.body.classList.contains('mobile')){ eq.readOnly=true; eq.setAttribute('inputmode','none'); }  // no soft keyboard — the calc has every sign
   else { eq.readOnly=false; eq.removeAttribute('inputmode'); }
 }
+function applyViewport(mobile){
+  // mobile layout: hard-disable zoom (double-tap via touch-action+maximum-scale, pinch via gesture events below)
+  const m=document.querySelector('meta[name=viewport]'); if(!m) return;
+  m.setAttribute('content', mobile
+    ? 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover'
+    : 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+}
+['gesturestart','gesturechange','gestureend'].forEach(ev=>
+  document.addEventListener(ev, e=>{ if(document.body.classList.contains('mobile')) e.preventDefault(); }, {passive:false}));
 function setLayout(mobile){
   document.body.classList.toggle('mobile', !!mobile);
+  applyViewport(!!mobile);
   const _rl=document.querySelector('.rules'), _stg=document.querySelector('.stage'), _mn=document.querySelector('.main');
   if(_rl){ if(mobile && _stg) _stg.appendChild(_rl); else if(!mobile && _mn) _mn.appendChild(_rl); }
   applyMyColor();

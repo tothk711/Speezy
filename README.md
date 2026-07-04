@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v3.4)
+# Špeezy — Multiplayer (v3.5)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,20 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 3.5
+- **Zoom is dead on mobile.** Double-tap zoom no longer fires anywhere in the
+  mobile layout (`touch-action:manipulation` page-wide + `maximum-scale=1` set
+  dynamically while mobile is active), and pinch-zoom is blocked via gesture
+  events. Desktop keeps normal zooming.
+- **Calmer phase countdown.** The last-10s countdown now lives in a
+  permanently reserved slot inside the chip and just fades in — the pill never
+  changes size ("10s" → "9s" used to resize it every second). The warning
+  pulse is slower and softer.
+- **Smoother phase morph.** The grow-swap-shrink is now a gentle 1.5s
+  sequence: softer scale (1.35×, no bounce), the label cross-fades instead of
+  snapping, and the pill width glides to its new size while the text is
+  invisible — no more jitter.
 
 ## What's new in 3.4
 - **Last-10-seconds phase warning.** The phase chip shows a countdown only for
