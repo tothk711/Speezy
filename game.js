@@ -261,6 +261,7 @@ function solveAll(dice){
 
 /* ================= Constants ================= */
 const D3=[5,5,10,10,20,20];
+const WILD1=[1,4,5,6,7,9], WILD2=[1,4,9,16,25,36], WILD3=[1,5,10,25,100,100];   // 🎰 wild dice face sets
 const ROUND=120, COOLDOWN=15000, CROSS_AT=30, HINT_AT=15;
 const JOKER_AT=60;   // 🃏 joker phase runs from 1:00 (timeLeft 60) down to the cleanup mark at 0:30 (CROSS_AT)
 const SETTLE_GRACE=5;   // when the joker expires on a dead board, wind down for this many seconds instead of ending instantly
@@ -350,14 +351,17 @@ class Game {
     this.seatGrace = SEAT_GRACE;
     this.initials = {};
     this.history = [];
-    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true };
-    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true };
+    this.mutationsPending = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true, wild:false };
+    this.mutationsActive  = { prematureCross:true, lastMinuteHints:true, bounty:true, joker:true, wild:false };
     this.roundId = 0;
     this.startRound();
     this.loop = setInterval(()=>{ try{ this.tick(); }catch(e){ console.error('tick error', e); } }, 1000);
   }
   startRound(){
-    const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6), d3=D3[Math.floor(Math.random()*6)];
+    const wild=!!this.mutationsPending.wild;   // pending becomes active this round (copied a few lines below)
+    const d1 = wild ? WILD1[Math.floor(Math.random()*6)] : 1+Math.floor(Math.random()*6);
+    const d2 = wild ? WILD2[Math.floor(Math.random()*6)] : 1+Math.floor(Math.random()*6);
+    const d3 = wild ? WILD3[Math.floor(Math.random()*6)] : D3[Math.floor(Math.random()*6)];
     this.avail=[d1,d2,d3];
     const picked=[...POOL].sort(()=>Math.random()-0.5).slice(0,12);
     this.pairs=picked.map(([a,b])=>{
@@ -572,6 +576,7 @@ class Game {
       cleanupPhase: !!this.mutationsActive.prematureCross,
       joker:(this.phase===1 ? this.jokerVal : null),
       timeLeft:Math.max(0,this.timeLeft), avail:this.avail,
+      wildDice: !!this.mutationsActive.wild,
       mutations:this.mutationsPending,
       pairs:this.pairs.map(p=>({
         color:p.color||null, bounty:!!p.bounty,

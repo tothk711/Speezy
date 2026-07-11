@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v4.4)
+# Špeezy — Multiplayer (v4.5)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,13 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.5
+- **New mutator: 🎰 Wild dice** (OFF by default, applies next round). When on,
+  the three dice roll from wilder face sets: die 1 from 1/4/5/6/7/9, die 2
+  from the squares 1/4/9/16/25/36, die 3 from 1/5/10/25/100/100. The math
+  engine handles multi-digit dice everywhere (calculator keys, concatenation,
+  solver, crosses, hints). Dice tumble animations show the matching wild faces.
 
 ## What's new in 4.4
 - **Streaks are a spectacle now.** Collection streaks are tracked for every

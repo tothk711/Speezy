@@ -503,8 +503,8 @@
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+2s / +5s / +10s / +15s / +20s</b> depending on time left — more time left means less time added.<br>
-            • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 4.4</b>
+            • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair; 🎰 <b>wild dice</b> — the dice roll from wilder sets (1/4/5/6/7/9 · squares to 36 · 1/5/10/25/100), off by default.<br>
+            • Version: <b>Špeezy 4.5</b>
           </div>
         </div>
       </div>
@@ -539,6 +539,9 @@
           </label>
           <label class="mut-row" title="Joker phase — from 1:00 to 0:30 a 4th die (1–6) joins; all three dice still required, the joker is an optional extra (applies next round)">
             <input type="checkbox" id="mutJoker" checked><span class="mutemote">🃏</span>
+          </label>
+          <label class="mut-row" title="Wild dice — the three dice roll from wilder sets: 1/4/5/6/7/9 · squares 1–36 · 1/5/10/25/100 (off by default, applies next round)">
+            <input type="checkbox" id="mutWild"><span class="mutemote">🎰</span>
           </label>
         </div>
       </aside>
@@ -739,6 +742,7 @@ function onState(st){
   const mh=$('mutHints'); if(mh && document.activeElement!==mh) mh.checked = !!(st.mutations && st.mutations.lastMinuteHints);
   const mb=$('mutBounty'); if(mb && document.activeElement!==mb) mb.checked = !!(st.mutations && st.mutations.bounty);
   const ms=$('mutJoker'); if(ms && document.activeElement!==ms) ms.checked = !!(st.mutations && st.mutations.joker);
+  const mv=$('mutWild'); if(mv && document.activeElement!==mv) mv.checked = !!(st.mutations && st.mutations.wild);
   document.body.classList.toggle('ended', !!st.ended);
   if(st.ended){ showWin(); hideHint(); if(!newRound && !wasEnded){ soundEnd(st.cleared); if(!RM) winnerBurst(); } }
   else hideWin();
@@ -849,7 +853,9 @@ function renderDice(){
   const dies=Array.prototype.slice.call(row.children);
   const target=G.avail.slice();
   if(RM){ dies.forEach((el,i)=>{ el.textContent=target[i]; }); return; }
-  const faces=[[1,2,3,4,5,6],[1,2,3,4,5,6],[5,10,20]];
+  const faces = G.wildDice
+    ? [[1,4,5,6,7,9],[1,4,9,16,25,36],[1,5,10,25,100]]
+    : [[1,2,3,4,5,6],[1,2,3,4,5,6],[5,10,20]];
   dies.forEach((el,i)=>{
     el.classList.add('tumble');
     const f=faces[Math.min(i,2)];
@@ -1369,6 +1375,7 @@ $('mutPremature').onchange=()=>socket.emit('setMutation',{key:'prematureCross',o
 $('mutHints').onchange=()=>socket.emit('setMutation',{key:'lastMinuteHints',on:$('mutHints').checked});
 $('mutBounty').onchange=()=>socket.emit('setMutation',{key:'bounty',on:$('mutBounty').checked});
 $('mutJoker').onchange=()=>socket.emit('setMutation',{key:'joker',on:$('mutJoker').checked});
+$('mutWild').onchange=()=>socket.emit('setMutation',{key:'wild',on:$('mutWild').checked});
 $('rulesToggle').onclick=()=>{
   const b=$('rulesBody'); const show=b.hasAttribute('hidden');
   if(show) b.removeAttribute('hidden'); else b.setAttribute('hidden','');
