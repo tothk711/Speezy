@@ -1,6 +1,6 @@
 {
   "name": "speezy",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "description": "Speezy - a real-time multiplayer math dice game",
   "main": "server.js",
   "scripts": {

@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v4.2)
+# Špeezy — Multiplayer (v4.3)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,14 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.3
+- **The extras drawer actually opens now.** Root cause of it appearing to do
+  nothing: the app shell used `position:fixed` on the `<body>`, which iOS
+  Safari handles erratically (it also caused 4.1's white background). The
+  shell is now a fixed **div** (`.wrap`) with native inner touch-scrolling —
+  the reliable mobile-web pattern. Opening the drawer smooth-scrolls the shell
+  down to it; closing snaps back to a fits-on-one-screen game.
 
 ## What's new in 4.2
 - **Dark theme restored on mobile** (iOS stopped propagating the body

@@ -315,9 +315,10 @@
   body.mobile #bounty{ font-size:15px; padding:7px 13px; }
   body.mobile .bounty-badge{ width:20px; height:20px; font-size:12px; top:-9px; left:5px; }
   /* ===== Mobile layout (toggled by the button, top-right) ===== */
-  body.mobile{ position:fixed; inset:0; overflow:hidden; display:flex; flex-direction:column; padding:6px; }   /* app shell — the page itself never scrolls */
-  body.mobile .wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;
-    padding-bottom:calc(8px + env(safe-area-inset-bottom)); }   /* the ONLY scroller — grows when the drawer opens */
+  body.mobile{ overflow:hidden; padding:0; }   /* the page itself never scrolls… */
+  body.mobile .wrap{ position:fixed; inset:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    padding:6px 6px calc(12px + env(safe-area-inset-bottom)); }   /* …the app shell div is the only scroller (fixed BODY breaks iOS — fixed DIV doesn't) */
   body.mobile .wrap{ max-width:100%; }
   body.mobile .topwrap{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }   /* one static row — nothing overlaps */
   body.mobile h1{ font-size:15px; padding-bottom:0; order:1; flex:1 1 auto; }
@@ -399,7 +400,7 @@
   body.mobile #moreBar:hover{ filter:none; }
   #moreBar .chev{ display:inline-block; transition:transform .2s; font-size:10px; }
   #moreBar.open .chev{ transform:rotate(90deg); }
-  body.mobile #moreWrap.open{ display:block; padding-top:6px; }
+  body.mobile #moreWrap.open{ display:block; padding-top:6px; overflow-x:hidden; }
 
   body.mobile .win{ padding:14px; }
   body.mobile .win b{ font-size:20px; }
@@ -475,7 +476,7 @@
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+2s / +5s / +10s / +15s / +20s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 4.2</b>
+            • Version: <b>Špeezy 4.3</b>
           </div>
         </div>
       </div>
@@ -1371,7 +1372,11 @@ if($('moreBar')) $('moreBar').onclick=()=>{
   $('moreWrap').classList.toggle('open', open);
   $('moreBar').classList.toggle('open', open);
   if(G) renderPalette();
-  if(open) setTimeout(()=>{ try{ $('moreWrap').scrollIntoView({behavior:'smooth', block:'end'}); }catch(e){} }, 40);
+  if(open) setTimeout(()=>{ try{
+    const wr=document.querySelector('.wrap');
+    if(wr && wr.scrollTo) wr.scrollTo({top:wr.scrollHeight, behavior:'smooth'});
+    else $('moreWrap').scrollIntoView({behavior:'smooth', block:'end'});
+  }catch(e){} }, 60);
 };
 $('equation').addEventListener('touchstart', e=>{ if(isMobile()) e.preventDefault(); }, {passive:false});
 (function(){
