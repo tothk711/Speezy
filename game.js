@@ -248,7 +248,7 @@ function solveAll(dice){
       const v=t.value;
       if(Math.abs(v-Math.round(v))>1e-6) continue;
       const k=Math.round(v);
-      if(k<1||k>1000) continue;
+      if(k<1||k>1024) continue;   // raised from 1000 so the 1024 tile is solvable/crossable correctly
       if(map[k] && map[k].length>=3) continue;
       const e=_stripOuter(t.expr);
       if(map[k] && map[k].includes(e)) continue;
@@ -277,7 +277,8 @@ const POOL=[
   [25,5],[20,2],[27,1],[56,14],[90,18],
   [80,10],[72,24],[90,30],[21,3],[30,2],
   [42,6],[81,27],[45,15],[28,2],[90,45],
-  [48,24],[70,35]
+  [48,24],[70,35],
+  [120,240],[360,720],[100,1024]   // 3.5.1 big-number pairs — factorials & powers (5!, 2·5!, 3·5!, 6!, 10², 2^10)
 ];
 const COLORS=[
   {name:'Sky',   hex:'#38bdf8'},

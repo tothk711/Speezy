@@ -317,10 +317,11 @@
   body.mobile{ padding:6px; padding-bottom:calc(272px + env(safe-area-inset-bottom)); }   /* room for the fixed calculator */
   body.mobile.ended{ padding-bottom:12px; }
   body.mobile .wrap{ max-width:100%; }
-  body.mobile h1{ font-size:15px; padding-bottom:2px; }
+  body.mobile .topwrap{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }   /* one static row — nothing overlaps */
+  body.mobile h1{ font-size:15px; padding-bottom:0; order:1; flex:1 1 auto; }
   body.mobile h1::after{ display:none; }
-  body.mobile .conn{ font-size:9px; top:2px; }
-  body.mobile .topbtns{ top:0; }
+  body.mobile .conn{ font-size:9px; position:static; order:0; flex:0 0 auto; max-width:34%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.mobile .topbtns{ position:static; order:2; flex:0 0 auto; }
   body.mobile .topbtn{ padding:4px 7px; font-size:10px; }
 
   /* flatten the nested columns into one stack, then sequence the pieces */
@@ -329,8 +330,6 @@
   body.mobile .main{ display:block; width:100%; min-width:0; flex:0 0 auto; position:static; }
   body.mobile .side{ display:block; width:100%; min-width:0; max-width:none; flex:0 0 auto; position:static; top:auto; }
   body.mobile #diceCard{ margin-bottom:0 !important; }
-  body.mobile .roster{ order:2; }      /* colors + last-4-round points near the bottom */
-  body.mobile .rules{ order:3; }       /* 'How it works' relocated below the board column (see setLayout) */
 
   /* the calculator becomes a fixed bottom sheet — always reachable, never overlaps (body reserves space) */
   body.mobile #solver{ position:fixed; left:6px; right:6px; bottom:calc(4px + env(safe-area-inset-bottom));
@@ -339,9 +338,9 @@
   body.mobile .calc-timer{ display:block; }
 
   body.mobile .card{ padding:6px; border-radius:10px; }
-  body.mobile .stats{ gap:6px; margin-bottom:0; padding:6px; }
+  body.mobile .stats{ gap:6px; margin-bottom:4px; padding:6px; }
   body.mobile .stat b{ font-size:17px; }
-  body.mobile .dice-strip{ padding:0; }
+  body.mobile .dice-strip{ padding:4px 0 10px; }   /* clearance: stats above, bounty badges below */
   body.mobile .phase-chip{ margin-left:6px; padding:4px 9px; font-size:10px; gap:4px; }
   body.mobile .phase-chip .phase-ico{ font-size:12px; }
   body.mobile .phase-chip .phase-count{ font-size:9px; width:18px; }
@@ -389,6 +388,17 @@
   body.mobile .rinit{ width:28px; font-size:10px; padding:3px 0; }
   body.mobile .rswatch{ width:22px; height:22px; font-size:12px; }
   body.mobile .rrecent{ min-width:13px; font-size:12px; }
+
+  /* v4.0: extras (players / mutators / help) live in a thin drawer, hidden by default */
+  #moreBar{ display:none; }
+  #moreWrap{ display:none; }
+  body.mobile #moreBar{ display:flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    margin-top:8px; padding:5px 0; font-size:11px; font-weight:700; color:var(--muted); cursor:pointer;
+    background:rgba(255,255,255,.03); border:1px solid rgba(42,47,82,.55); border-radius:9px; }
+  body.mobile #moreBar:hover{ filter:none; }
+  #moreBar .chev{ display:inline-block; transition:transform .2s; font-size:10px; }
+  #moreBar.open .chev{ transform:rotate(90deg); }
+  body.mobile #moreWrap.open{ display:block; padding-top:6px; }
 
   body.mobile .win{ padding:14px; }
   body.mobile .win b{ font-size:20px; }
@@ -451,6 +461,9 @@
           <button class="gold" id="winPlay">🎲 New Game</button>
         </div>
 
+        <button id="moreBar" type="button"><span class="chev">▸</span> Players · Mutators · Help</button>
+        <div id="moreWrap"></div>
+
         <div class="rules">
           <button class="rules-toggle" id="rulesToggle"><span class="chev">▸</span> How it works</button>
           <div class="rules-body" id="rulesBody" hidden>
@@ -461,7 +474,7 @@
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 3.5</b>
+            • Version: <b>Špeezy 4.0</b>
           </div>
         </div>
       </div>
@@ -816,8 +829,11 @@ function renderDice(){
 }
 
 /* ---------- calculator ---------- */
+function isMobile(){ return document.body.classList.contains('mobile'); }
+function focusEq(){ if(!isMobile()) $('equation').focus(); }   // focusing the field on mobile makes Safari scroll-jump the page
 function insertText(ins){
   const inp=$('equation'); if(inp.disabled) return;
+  if(isMobile()){ inp.value+=ins; updatePreview(); return; }   // append-only on mobile — no focus, no caret, no jumps
   const s=inp.selectionStart, e=inp.selectionEnd;
   inp.value=inp.value.slice(0,s)+ins+inp.value.slice(e);
   inp.selectionStart=inp.selectionEnd=s+ins.length;
@@ -825,12 +841,13 @@ function insertText(ins){
 }
 function backspace(){
   const inp=$('equation'); if(inp.disabled) return;
+  if(isMobile()){ inp.value=inp.value.slice(0,-1); updatePreview(); return; }
   const s=inp.selectionStart, e=inp.selectionEnd;
   if(s!==e){ inp.value=inp.value.slice(0,s)+inp.value.slice(e); inp.selectionStart=inp.selectionEnd=s; }
   else if(s>0){ inp.value=inp.value.slice(0,s-1)+inp.value.slice(s); inp.selectionStart=inp.selectionEnd=s-1; }
   updatePreview(); inp.focus();
 }
-function clearEq(){ const inp=$('equation'); if(inp.disabled) return; inp.value=''; updatePreview(); inp.focus(); }
+function clearEq(){ const inp=$('equation'); if(inp.disabled) return; inp.value=''; updatePreview(); focusEq(); }
 function jokerOn(){ return !!(G && !G.ended && G.phase===1 && G.joker!=null); }
 function effAvail(){ return jokerOn() ? G.avail.concat([G.joker]) : G.avail; }
 function renderCalcGrid(){
@@ -1239,7 +1256,7 @@ function selectTile(pi,ti){
     if(vleft>0) setMsg('⏳ You claimed a '+t.val+' recently — ready in '+Math.ceil(vleft/1000)+'s.','');
     else setMsg('','');
   }
-  refreshSolver(); updatePreview(); updateBoard(); $('equation').focus();
+  refreshSolver(); updatePreview(); updateBoard(); focusEq();
 }
 function check(){
   if(!selected){ setMsg(myColor?'Pick a number first.':'Pick a color first (left).','bad'); return; }
@@ -1325,8 +1342,17 @@ function applyViewport(mobile){
 function setLayout(mobile){
   document.body.classList.toggle('mobile', !!mobile);
   applyViewport(!!mobile);
-  const _rl=document.querySelector('.rules'), _stg=document.querySelector('.stage'), _mn=document.querySelector('.main');
-  if(_rl){ if(mobile && _stg) _stg.appendChild(_rl); else if(!mobile && _mn) _mn.appendChild(_rl); }
+  const rl=document.querySelector('.rules'), stg=document.querySelector('.stage'),
+        mn=document.querySelector('.main'), sd=document.querySelector('.side'),
+        lay=document.querySelector('.layout'), pal=$('palette'),
+        muts=document.querySelector('.mutations'), mw=$('moreWrap');
+  if(mobile){
+    if(mw){ if(muts) mw.appendChild(muts); if(pal) mw.appendChild(pal); if(rl) mw.appendChild(rl); }
+  } else {
+    if(pal && stg && lay) stg.insertBefore(pal, lay);
+    if(muts && sd) sd.appendChild(muts);
+    if(rl && mn) mn.appendChild(rl);
+  }
   applyMyColor();
   const b=$('layoutToggle'); if(b) b.textContent = mobile ? '🖥️ Desktop layout' : '📱 Mobile layout';
   applyEquationMode();
@@ -1335,6 +1361,13 @@ function setLayout(mobile){
   if(G) updateBoard();
 }
 if($('layoutToggle')) $('layoutToggle').onclick=()=>setLayout(!document.body.classList.contains('mobile'));
+if($('moreBar')) $('moreBar').onclick=()=>{
+  const open=!$('moreWrap').classList.contains('open');
+  $('moreWrap').classList.toggle('open', open);
+  $('moreBar').classList.toggle('open', open);
+  if(G) renderPalette();
+};
+$('equation').addEventListener('touchstart', e=>{ if(isMobile()) e.preventDefault(); }, {passive:false});
 (function(){
   let pref=null; try{ pref=localStorage.getItem('speezy_mobile'); }catch(e){}
   const auto = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');

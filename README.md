@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v3.5)
+# Špeezy — Multiplayer (v4.0)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,27 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.0 — the phone release
+- **No more screen jumps.** Tapping a tile or calculator key no longer scrolls
+  the page: the equation field is never focused on mobile (Safari scroll-jumps
+  to focused inputs), editing is append-style there, and tapping the field
+  itself is inert. The board and calculator stay exactly where they are.
+- **Extras live in a drawer.** Mutators, the player roster and "How it works"
+  are tucked into a thin "Players · Mutators · Help" bar under the board —
+  hidden by default, one tap to expand. The whole game (stats, dice, board,
+  calculator) now fits on screen with room to spare. Desktop is unchanged.
+- **Overlaps fixed.** The top is now one static row (status · title · buttons)
+  that can't overlap the score bar, and the dice strip has clearance from the
+  stats above and the bounty badges below.
+
+## What's new in 3.5.1
+- **Three big-number pairs join the rotation:** `120+240`, `360+720` and
+  `100+1024`. Numbers picked empirically (solver coverage across all 108
+  possible rolls) and paired to maximize joint lockability (75% / 54% / 44% of
+  rolls can lock them — factorials and powers do the heavy lifting).
+- Solver value cap raised 1000 → 1024 so the new tile is solvable and gets
+  crossed/hinted correctly.
 
 ## What's new in 3.5
 - **Zoom is dead on mobile.** Double-tap zoom no longer fires anywhere in the
