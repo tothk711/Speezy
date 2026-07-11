@@ -290,11 +290,11 @@ const COLORS=[
 ];
 
 function timeBonus(t){
-  if(t>120) return 5;
-  if(t>90)  return 10;
-  if(t>60)  return 15;
-  if(t>30)  return 20;
-  return 25;            // (0, 30]  — least time left, most added
+  if(t>120) return 2;
+  if(t>90)  return 5;
+  if(t>60)  return 10;
+  if(t>30)  return 15;
+  return 20;            // (0, 30]  — least time left, most added
 }
 
 /* ================= Pure rule helpers ================= */

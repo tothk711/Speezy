@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v4.0)
+# Špeezy — Multiplayer (v4.1)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,15 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.1
+- **Time bonuses retuned:** +2s / +5s / +10s / +15s / +20s (was +5 through
+  +25) — each segment a notch lower.
+- **Zero page scroll on mobile.** The mobile layout is now a fixed app shell:
+  the body never scrolls (no rubber-banding, no empty void under the board),
+  the content area ends exactly at the calculator's top edge (its real height
+  is measured live), and only overflows internally when the extras drawer is
+  open. Hint/bounty bubbles track the inner scroller.
 
 ## What's new in 4.0 — the phone release
 - **No more screen jumps.** Tapping a tile or calculator key no longer scrolls

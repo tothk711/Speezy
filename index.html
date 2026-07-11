@@ -314,7 +314,9 @@
   body.mobile #bounty{ font-size:15px; padding:7px 13px; }
   body.mobile .bounty-badge{ width:20px; height:20px; font-size:12px; top:-9px; left:5px; }
   /* ===== Mobile layout (toggled by the button, top-right) ===== */
-  body.mobile{ padding:6px; padding-bottom:calc(272px + env(safe-area-inset-bottom)); }   /* room for the fixed calculator */
+  body.mobile{ position:fixed; inset:0; overflow:hidden; display:flex; flex-direction:column;
+    padding:6px 6px calc(var(--calcH,258px) + env(safe-area-inset-bottom) + 10px); }   /* app shell — the page itself never scrolls */
+  body.mobile .wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }   /* scrolls only if the drawer overflows */
   body.mobile.ended{ padding-bottom:12px; }
   body.mobile .wrap{ max-width:100%; }
   body.mobile .topwrap{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }   /* one static row — nothing overlaps */
@@ -472,9 +474,9 @@
             • Operators: <code>+ - * / ^</code>, <code>sqrt( )</code>/<code>√( )</code>/<code>s</code> (<code>s4</code>=2), factorial <code>!</code>, log base-10 <code>log( )</code> or <code>l</code>, parentheses, and concatenation.<br>
             • If a pair is split, whoever owns one half can steal the other.<br>
             • After you claim a value, you can't claim the same value again for 15s.<br>
-            • A correct number adds <b style="color:var(--green)">+5s / +10s / +15s / +20s / +25s</b> depending on time left — more time left means less time added.<br>
+            • A correct number adds <b style="color:var(--green)">+2s / +5s / +10s / +15s / +20s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 4.0</b>
+            • Version: <b>Špeezy 4.1</b>
           </div>
         </div>
       </div>
@@ -809,6 +811,7 @@ function renderDice(){
   const row=$('diceRow');
   row.innerHTML=G.avail.map(()=>'<div class="die">?</div>').join('');
   renderCalcGrid();
+  sizeMobileViewport();   // calc grid just (re)built — re-measure the sheet
   const dies=Array.prototype.slice.call(row.children);
   const target=G.avail.slice();
   if(RM){ dies.forEach((el,i)=>{ el.textContent=target[i]; }); return; }
@@ -830,6 +833,12 @@ function renderDice(){
 
 /* ---------- calculator ---------- */
 function isMobile(){ return document.body.classList.contains('mobile'); }
+function sizeMobileViewport(){
+  if(!isMobile()) return;
+  const sv=$('solver');
+  if(sv && sv.offsetHeight>0) document.body.style.setProperty('--calcH', sv.offsetHeight+'px');
+}
+window.addEventListener('resize', sizeMobileViewport);
 function focusEq(){ if(!isMobile()) $('equation').focus(); }   // focusing the field on mobile makes Safari scroll-jump the page
 function insertText(ins){
   const inp=$('equation'); if(inp.disabled) return;
@@ -1159,6 +1168,7 @@ function showHint(pi,ti,partial){
   hintTimer=setTimeout(hideHint,10000);
 }
 window.addEventListener('scroll',()=>{ if(hintTile) positionHint(); if(bountyPi>=0) positionBounty(); },{passive:true});
+document.addEventListener('scroll',()=>{ if(hintTile) positionHint(); if(bountyPi>=0) positionBounty(); },{capture:true,passive:true});
 window.addEventListener('resize',()=>{ if(hintTile) positionHint(); if(bountyPi>=0) positionBounty(); });
 
 /* ---------- bounty announcement bubble (sequenced after the dice settle) ---------- */
@@ -1358,6 +1368,7 @@ function setLayout(mobile){
   applyEquationMode();
   if(mobile){ const eq=$('equation'); if(eq) eq.blur(); }
   try{ localStorage.setItem('speezy_mobile', mobile?'1':'0'); }catch(e){}
+  sizeMobileViewport();
   if(G) updateBoard();
 }
 if($('layoutToggle')) $('layoutToggle').onclick=()=>setLayout(!document.body.classList.contains('mobile'));
