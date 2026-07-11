@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v4.1)
+# Špeezy — Multiplayer (v4.2)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,17 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.2
+- **Dark theme restored on mobile** (iOS stopped propagating the body
+  background once the app shell made the body fixed — the base color now also
+  lives on `<html>`).
+- **No more sideways scrolling** (the inner scroller is `overflow-x:hidden`).
+- **New mobile structure, per Vit's design:** the calculator sits in normal
+  flow right under the board (no longer pinned to the screen bottom — no
+  height-measuring needed), and the "Players · Mutators · Help" drawer lives
+  *below* the calculator; opening it grows the page and smooth-scrolls down to
+  it. The calculator is ~10% taller for comfier keys.
 
 ## What's new in 4.1
 - **Time bonuses retuned:** +2s / +5s / +10s / +15s / +20s (was +5 through

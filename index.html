@@ -14,6 +14,7 @@
     --line:#2a2f52;
   }
   *{box-sizing:border-box}
+  html{background:var(--bg)}
   body{
     margin:0; font-family:"Segoe UI",system-ui,Arial,sans-serif;
     background:radial-gradient(1200px 600px at 50% -10%,#1b2046,#0f1224 60%);
@@ -314,10 +315,9 @@
   body.mobile #bounty{ font-size:15px; padding:7px 13px; }
   body.mobile .bounty-badge{ width:20px; height:20px; font-size:12px; top:-9px; left:5px; }
   /* ===== Mobile layout (toggled by the button, top-right) ===== */
-  body.mobile{ position:fixed; inset:0; overflow:hidden; display:flex; flex-direction:column;
-    padding:6px 6px calc(var(--calcH,258px) + env(safe-area-inset-bottom) + 10px); }   /* app shell — the page itself never scrolls */
-  body.mobile .wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }   /* scrolls only if the drawer overflows */
-  body.mobile.ended{ padding-bottom:12px; }
+  body.mobile{ position:fixed; inset:0; overflow:hidden; display:flex; flex-direction:column; padding:6px; }   /* app shell — the page itself never scrolls */
+  body.mobile .wrap{ flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom)); }   /* the ONLY scroller — grows when the drawer opens */
   body.mobile .wrap{ max-width:100%; }
   body.mobile .topwrap{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }   /* one static row — nothing overlaps */
   body.mobile h1{ font-size:15px; padding-bottom:0; order:1; flex:1 1 auto; }
@@ -333,9 +333,8 @@
   body.mobile .side{ display:block; width:100%; min-width:0; max-width:none; flex:0 0 auto; position:static; top:auto; }
   body.mobile #diceCard{ margin-bottom:0 !important; }
 
-  /* the calculator becomes a fixed bottom sheet — always reachable, never overlaps (body reserves space) */
-  body.mobile #solver{ position:fixed; left:6px; right:6px; bottom:calc(4px + env(safe-area-inset-bottom));
-    z-index:45; margin:0; box-shadow:0 -8px 34px rgba(0,0,0,.6); }
+  /* the calculator sits in flow, right under the board; the extras drawer lives below it */
+  body.mobile #solver{ position:static; margin:8px 0 0; }
   body.mobile.ended #solver{ display:none; }   /* at round end, free the screen to browse solutions */
   body.mobile .calc-timer{ display:block; }
 
@@ -364,21 +363,21 @@
   body.mobile .target .protcount{ font-size:9px; padding:0 4px; line-height:1.5; bottom:1px; }
   body.mobile .lockbadge{ width:18px; height:18px; font-size:10px; top:-8px; }
 
-  body.mobile .solver{ padding:7px; }
-  body.mobile .calc-head{ margin-bottom:2px; align-items:center; }
+  body.mobile .solver{ padding:9px; }
+  body.mobile .calc-head{ margin-bottom:3px; align-items:center; }
   body.mobile .calc-sub{ font-size:9px; letter-spacing:1px; }
-  body.mobile .bigtarget{ font-size:22px; }
-  body.mobile .calc-timer{ font-size:16px; }
-  body.mobile #equation{ padding:5px 9px; font-size:14px; border-radius:8px; }
-  body.mobile .calcgrid{ gap:4px; margin:4px 0 2px; }
-  body.mobile .cbtn{ padding:7px 0; font-size:15px; border-radius:8px; }
-  body.mobile .cbtn.num{ font-size:16px; }
-  body.mobile .cbtn.word{ font-size:11px; }
-  body.mobile .cbtn.op{ font-size:20px; padding:4px 0; }
+  body.mobile .bigtarget{ font-size:24px; }
+  body.mobile .calc-timer{ font-size:17px; }
+  body.mobile #equation{ padding:7px 10px; font-size:15px; border-radius:8px; }
+  body.mobile .calcgrid{ gap:5px; margin:5px 0 2px; }
+  body.mobile .cbtn{ padding:9px 0; font-size:16px; border-radius:8px; }
+  body.mobile .cbtn.num{ font-size:17px; }
+  body.mobile .cbtn.word{ font-size:12px; }
+  body.mobile .cbtn.op{ font-size:22px; padding:5px 0; }
   body.mobile .calc-total{ font-size:10px; margin:1px 2px 2px; }
   body.mobile .calc-total b{ font-size:13px; }
-  body.mobile .calc-actions{ gap:4px; }
-  body.mobile .calc-actions button{ padding:6px 0; font-size:12px; }
+  body.mobile .calc-actions{ gap:5px; }
+  body.mobile .calc-actions button{ padding:8px 0; font-size:13px; }
   body.mobile .msg{ font-size:11px; margin-top:2px; min-height:13px; }
 
   body.mobile .mutations{ display:flex; justify-content:center; padding:5px 12px; gap:16px; margin-top:0; }
@@ -476,7 +475,7 @@
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+2s / +5s / +10s / +15s / +20s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 4.1</b>
+            • Version: <b>Špeezy 4.2</b>
           </div>
         </div>
       </div>
@@ -811,7 +810,6 @@ function renderDice(){
   const row=$('diceRow');
   row.innerHTML=G.avail.map(()=>'<div class="die">?</div>').join('');
   renderCalcGrid();
-  sizeMobileViewport();   // calc grid just (re)built — re-measure the sheet
   const dies=Array.prototype.slice.call(row.children);
   const target=G.avail.slice();
   if(RM){ dies.forEach((el,i)=>{ el.textContent=target[i]; }); return; }
@@ -833,12 +831,6 @@ function renderDice(){
 
 /* ---------- calculator ---------- */
 function isMobile(){ return document.body.classList.contains('mobile'); }
-function sizeMobileViewport(){
-  if(!isMobile()) return;
-  const sv=$('solver');
-  if(sv && sv.offsetHeight>0) document.body.style.setProperty('--calcH', sv.offsetHeight+'px');
-}
-window.addEventListener('resize', sizeMobileViewport);
 function focusEq(){ if(!isMobile()) $('equation').focus(); }   // focusing the field on mobile makes Safari scroll-jump the page
 function insertText(ins){
   const inp=$('equation'); if(inp.disabled) return;
@@ -1356,19 +1348,21 @@ function setLayout(mobile){
         mn=document.querySelector('.main'), sd=document.querySelector('.side'),
         lay=document.querySelector('.layout'), pal=$('palette'),
         muts=document.querySelector('.mutations'), mw=$('moreWrap');
+  const mb=$('moreBar');
   if(mobile){
     if(mw){ if(muts) mw.appendChild(muts); if(pal) mw.appendChild(pal); if(rl) mw.appendChild(rl); }
+    if(sd && mb && mw){ sd.appendChild(mb); sd.appendChild(mw); }   // bar + drawer live under the calculator
   } else {
     if(pal && stg && lay) stg.insertBefore(pal, lay);
     if(muts && sd) sd.appendChild(muts);
     if(rl && mn) mn.appendChild(rl);
+    if(mn && mb && mw){ mn.appendChild(mb); mn.appendChild(mw); }   // parked (hidden) on desktop
   }
   applyMyColor();
   const b=$('layoutToggle'); if(b) b.textContent = mobile ? '🖥️ Desktop layout' : '📱 Mobile layout';
   applyEquationMode();
   if(mobile){ const eq=$('equation'); if(eq) eq.blur(); }
   try{ localStorage.setItem('speezy_mobile', mobile?'1':'0'); }catch(e){}
-  sizeMobileViewport();
   if(G) updateBoard();
 }
 if($('layoutToggle')) $('layoutToggle').onclick=()=>setLayout(!document.body.classList.contains('mobile'));
@@ -1377,6 +1371,7 @@ if($('moreBar')) $('moreBar').onclick=()=>{
   $('moreWrap').classList.toggle('open', open);
   $('moreBar').classList.toggle('open', open);
   if(G) renderPalette();
+  if(open) setTimeout(()=>{ try{ $('moreWrap').scrollIntoView({behavior:'smooth', block:'end'}); }catch(e){} }, 40);
 };
 $('equation').addEventListener('touchstart', e=>{ if(isMobile()) e.preventDefault(); }, {passive:false});
 (function(){
