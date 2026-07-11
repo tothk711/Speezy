@@ -198,6 +198,34 @@
     text-shadow:0 2px 10px rgba(0,0,0,.7);animation:ptsRise .95s ease-out forwards}
   @keyframes ptsRise{0%{opacity:0;transform:translate(-50%,0) scale(.6)}14%{opacity:1;transform:translate(-50%,-10px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-48px) scale(1)}}
 
+  /* 🔥 collection-streak fire on the scoreboard */
+  .score{position:relative}
+  .score .flame{display:none;font-size:13px;margin-left:1px}
+  .score.fire .flame{display:inline-block;animation:flameWob .45s ease-in-out infinite alternate}
+  @keyframes flameWob{from{transform:scale(.9) rotate(-8deg)}to{transform:scale(1.15) rotate(8deg)}}
+  .score.fire .scnum{animation:fireGlow 1.3s ease}
+  @keyframes fireGlow{0%{text-shadow:none}25%{text-shadow:0 0 12px rgba(255,140,30,.95),0 0 26px rgba(255,90,10,.6);transform:scale(1.3)}100%{text-shadow:none}}
+
+  /* full-screen edge glow — reward pulse on locks / round wins */
+  #edgeGlow{position:fixed;inset:0;pointer-events:none;z-index:65;opacity:0}
+  #edgeGlow.on{animation:edgeFlash .75s ease-out}
+  @keyframes edgeFlash{0%{opacity:0}22%{opacity:.9}100%{opacity:0}}
+
+  /* board deal-in cascade at round start */
+  #targets.dealing .pair{animation:dealIn .42s cubic-bezier(.2,1.2,.4,1) both}
+  @keyframes dealIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:none}}
+  #targets.dealing .pair:nth-child(2){animation-delay:.03s}
+  #targets.dealing .pair:nth-child(3){animation-delay:.06s}
+  #targets.dealing .pair:nth-child(4){animation-delay:.09s}
+  #targets.dealing .pair:nth-child(5){animation-delay:.12s}
+  #targets.dealing .pair:nth-child(6){animation-delay:.15s}
+  #targets.dealing .pair:nth-child(7){animation-delay:.18s}
+  #targets.dealing .pair:nth-child(8){animation-delay:.21s}
+  #targets.dealing .pair:nth-child(9){animation-delay:.24s}
+  #targets.dealing .pair:nth-child(10){animation-delay:.27s}
+  #targets.dealing .pair:nth-child(11){animation-delay:.30s}
+  #targets.dealing .pair:nth-child(12){animation-delay:.33s}
+
   /* confetti burst on locks */
   .cfetti{position:fixed;width:8px;height:8px;border-radius:2px;z-index:69;pointer-events:none;will-change:transform,opacity;
     animation:cfly var(--d,.8s) cubic-bezier(.15,.65,.35,1) forwards}
@@ -476,7 +504,7 @@
             • After you claim a value, you can't claim the same value again for 15s.<br>
             • A correct number adds <b style="color:var(--green)">+2s / +5s / +10s / +15s / +20s</b> depending on time left — more time left means less time added.<br>
             • <b>Mutations</b>: 🃏 enables the Joker phase; ❌ enables Cleanup crossing (off = a plain ⏱ Endgame); 💡 pops a partial hint on a random unsolved tile at 0:15; 💰 marks one pair as a gold <b style="color:var(--gold)">bounty</b> worth 2 per tile and 4 for locking the pair.<br>
-            • Version: <b>Špeezy 4.3</b>
+            • Version: <b>Špeezy 4.4</b>
           </div>
         </div>
       </div>
@@ -521,6 +549,7 @@
 <div id="tip"></div>
 <div id="hint"></div>
 <div id="bounty"></div>
+<div id="edgeGlow"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/game.js"></script>
@@ -541,6 +570,7 @@ let G=null, myColor=null, selected=null, cursor=null;
 let myClaimLog={}, lastRoundId=-1, lastAvail='', lastAttempt=null;
 let recentTakes={}, crossShown={}, msgTimer=null;
 let pulseUntil=0, myStreak=0, lastOkAt=0, prevScores={};
+let streaks={}, fireUntil={}, fireTimers={};   // per-player collection streaks
 
 function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')'; }
 function applyMyColor(){
@@ -635,15 +665,19 @@ socket.on('fx', f=>{ try{
   if(f.type==='settling'){ if(G && !G.ended){ G.settleIn=f.secs||5; updateMood(); } return; }
   if(f.type!=='claim') return;
   const mine = f.color===myColor;
-  if(mine){ const n=Date.now(); myStreak = (n-lastOkAt<12000) ? myStreak+1 : 1; lastOkAt=n; }
+  const tnow = Date.now();
+  const stk = (streaks[f.color] && tnow-streaks[f.color].at<12000) ? streaks[f.color].n+1 : 1;   // everyone's streaks, not just mine
+  streaks[f.color]={n:stk, at:tnow};
+  if(mine){ myStreak=stk; lastOkAt=tnow; }
   const mult = mine ? Math.pow(1.06, Math.min(myStreak-1,8)) : 1;
   if(f.locked) popPair(f.pi);
   markTaken(f.pi,f.ti);
   if(!RM){
     rippleFx(f.pi,f.ti,f.color);
-    if(f.locked) confettiFx(f.pi,f.color,!!f.bounty);
-    let txt='+'+(f.pts||1); if(mine && myStreak>=2) txt+=' 🔥×'+myStreak;
-    floatPts(f.pi,txt,f.color);
+    if(f.locked){ confettiFx(f.pi,f.color,!!f.bounty); edgeFlash(f.bounty?'#ffd23f':f.color); }
+    let txt='+'+(f.pts||1); if(stk>=2) txt+=' 🔥×'+stk;
+    floatPts(f.pi,txt,f.color,stk);
+    if(stk>=2) igniteScore(f.color);
   }
   if(f.locked && f.bounty) soundBounty(); else if(f.isSteal) soundSteal(); else if(f.locked) soundLock(mult); else soundTaken(mult);
 }catch(e){ console.error('fx', e); } });
@@ -688,7 +722,7 @@ function onState(st){
   pulseUntil = now - (st.roundAge||0) + 20000;   // bounty ring pulses for the first 20s of the round
   if(newRound){
     lastRoundId=st.roundId; myClaimLog={}; selected=null; cursor=null; recentTakes={}; crossShown={};
-    myStreak=0; lastOkAt=0;
+    myStreak=0; lastOkAt=0; streaks={}; fireUntil={};
     setMsg('',''); $('equation').value=''; updatePreview();
     $('tip').classList.remove('show','cheat');
     hideHint(); hideBounty();
@@ -706,7 +740,7 @@ function onState(st){
   const mb=$('mutBounty'); if(mb && document.activeElement!==mb) mb.checked = !!(st.mutations && st.mutations.bounty);
   const ms=$('mutJoker'); if(ms && document.activeElement!==ms) ms.checked = !!(st.mutations && st.mutations.joker);
   document.body.classList.toggle('ended', !!st.ended);
-  if(st.ended){ showWin(); hideHint(); if(!newRound && !wasEnded) soundEnd(st.cleared); }
+  if(st.ended){ showWin(); hideHint(); if(!newRound && !wasEnded){ soundEnd(st.cleared); if(!RM) winnerBurst(); } }
   else hideWin();
   updateMood();
   updateBoard();
@@ -802,6 +836,7 @@ function renderPalette(){
 
 /* ---------- dice (tumble on each new roll, staggered settle) ---------- */
 let diceTimers=[]; let jokerShown=null;
+let clickStamp=[], clickSeq=0;   // which physical die key was tapped (for duplicate dice dimming)
 function renderDice(){
   const a=G.avail.join(',');
   if(a===lastAvail) return;
@@ -854,10 +889,11 @@ function jokerOn(){ return !!(G && !G.ended && G.phase===1 && G.joker!=null); }
 function effAvail(){ return jokerOn() ? G.avail.concat([G.joker]) : G.avail; }
 function renderCalcGrid(){
   const g=$('calcgrid'); if(!g||!G) return; g.innerHTML='';
-  const cell=(label,ins,cls)=>{ const b=document.createElement('button'); b.className='cbtn'+(cls?' '+cls:''); b.textContent=label; b.onclick=()=>{ soundKey(); insertText(ins); }; g.appendChild(b); };
+  const cell=(label,ins,cls,idx)=>{ const b=document.createElement('button'); b.className='cbtn'+(cls?' '+cls:''); b.textContent=label; b.onclick=()=>{ if(idx!=null) clickStamp[idx]=++clickSeq; soundKey(); insertText(ins); }; g.appendChild(b); };
   const blank=()=>{ const d=document.createElement('div'); d.className='cempty'; g.appendChild(d); };
+  clickStamp=[];   // fresh keys — forget which duplicates were tapped
   const dice=effAvail();
-  dice.forEach((d,i)=>cell(String(d),String(d),'num'+(i>=G.avail.length?' joker':'')));
+  dice.forEach((d,i)=>cell(String(d),String(d),'num'+(i>=G.avail.length?' joker':''),i));
   for(let i=dice.length;i<4;i++) blank();
   cell('+','+','op'); cell('−','-','op'); cell('×','*','op'); cell('/','/','op');
   cell('(','('); cell(')',')'); cell('^','^'); cell('√','sqrt(');
@@ -905,7 +941,17 @@ function applyDimming(){
   const g=$('calcgrid'); if(!g||!G) return;
   const nums=g.querySelectorAll('.cbtn.num');
   const used=(!$('equation').disabled) ? dieUsage() : effAvail().map(()=>false);
-  nums.forEach((b,i)=>b.classList.toggle('dim', !!used[i]));
+  // among duplicate dice, grey out the key the player actually tapped (most recent taps first)
+  const vals=effAvail(), byVal={};
+  vals.forEach((v,i)=>{ (byVal[v]=byVal[v]||[]).push(i); });
+  const finalUsed=vals.map(()=>false);
+  for(const v in byVal){
+    const idxs=byVal[v];
+    const need=idxs.filter(i=>used[i]).length;
+    const order=idxs.slice().sort((a,b)=>(clickStamp[b]||0)-(clickStamp[a]||0));
+    for(let k=0;k<need;k++) finalUsed[order[k]]=true;
+  }
+  nums.forEach((b,i)=>b.classList.toggle('dim', !!finalUsed[i]));
 }
 
 /* ---------- scores / win ---------- */
@@ -914,10 +960,11 @@ function renderScores(){
   const m=G.scores||{};
   const active=COLORS.filter(c=>(m[c.hex]||0)>0);
   if(!active.length){ el.innerHTML='<b class="scnum" style="color:'+(myColor||'var(--muted)')+'">0</b>'; prevScores={}; return; }
+  const nowF=Date.now();
   active.forEach(c=>{
-    const d=document.createElement('div'); d.className='score';
+    const d=document.createElement('div'); d.className='score'+((fireUntil[c.hex]||0)>nowF?' fire':''); d.dataset.hex=c.hex;
     const bumped=(m[c.hex]||0)>(prevScores[c.hex]||0) && !RM;
-    d.innerHTML='<span class="dot" style="background:'+c.hex+'"></span><b class="scnum'+(bumped?' bump':'')+'" style="color:'+c.hex+'">'+m[c.hex]+'</b>';
+    d.innerHTML='<span class="dot" style="background:'+c.hex+'"></span><b class="scnum'+(bumped?' bump':'')+'" style="color:'+c.hex+'">'+m[c.hex]+'</b><span class="flame">🔥</span>';
     el.appendChild(d);
   });
   prevScores=Object.assign({},m);
@@ -951,6 +998,7 @@ function hideWin(){ $('win').classList.remove('show'); }
 let boardRefs=null;
 function buildBoard(){
   const g=$('targets'); g.innerHTML=''; boardRefs=[];
+  if(!RM){ g.classList.add('dealing'); clearTimeout(buildBoard._dt); buildBoard._dt=setTimeout(()=>g.classList.remove('dealing'), 950); }
   const frag=document.createDocumentFragment();
   G.pairs.forEach((p,pi)=>{
     const card=document.createElement('div'); card.className='pair';
@@ -1068,9 +1116,9 @@ document.getElementById('targets').addEventListener('animationend',e=>{
 function confettiFx(pi,color,big){
   const refs=boardRefs && boardRefs[pi]; if(!refs) return;
   const r=refs.card.getBoundingClientRect();
-  const cx=r.left+r.width/2, cy=r.top+r.height/2;
-  const n=big?18:12;
-  const palette=[color,'#ffffff',big?'#ffd23f':color];
+  confettiAt(r.left+r.width/2, r.top+r.height/2, [color,'#ffffff',big?'#ffd23f':color], big?18:12);
+}
+function confettiAt(cx,cy,palette,n){
   for(let i=0;i<n;i++){
     const d=document.createElement('div'); d.className='cfetti';
     const ang=Math.random()*Math.PI*2, dist=40+Math.random()*70;
@@ -1086,11 +1134,33 @@ function confettiFx(pi,color,big){
     setTimeout(()=>{ if(d.parentNode) d.remove(); },1400);
   }
 }
-function floatPts(pi,text,color){
+function edgeFlash(color){
+  const eg=$('edgeGlow'); if(!eg||RM) return;
+  eg.style.boxShadow='inset 0 0 90px 24px '+hexA(color||'#ffffff',.55);
+  eg.classList.remove('on'); void eg.offsetWidth; eg.classList.add('on');
+}
+function igniteScore(hex){
+  fireUntil[hex]=Date.now()+1400;
+  const el=document.querySelector('.score[data-hex="'+hex+'"]');
+  if(el){ el.classList.remove('fire'); void el.offsetWidth; el.classList.add('fire'); }
+  clearTimeout(fireTimers[hex]);
+  fireTimers[hex]=setTimeout(()=>{ const e2=document.querySelector('.score[data-hex="'+hex+'"]'); if(e2) e2.classList.remove('fire'); },1400);
+}
+function winnerBurst(){
+  const m=(G&&G.scores)||{}; const vals=Object.keys(m).map(k=>m[k]); if(!vals.length) return;
+  const top=Math.max.apply(null,vals);
+  const winners=COLORS.filter(c=>m[c.hex]===top).map(c=>c.hex);
+  const wb=$('win'); const r=wb?wb.getBoundingClientRect():null;
+  const cx=(r&&r.width?r.left+r.width/2:window.innerWidth/2), cy=(r&&r.width?r.top+40:window.innerHeight/3);
+  confettiAt(cx,cy,winners.concat(['#ffd23f','#ffffff']),26);
+  if(winners[0]) edgeFlash(winners[0]);
+}
+function floatPts(pi,text,color,streak){
   const refs=boardRefs && boardRefs[pi]; if(!refs) return;
   const r=refs.card.getBoundingClientRect();
   const d=document.createElement('div'); d.className='ptsfloat';
   d.textContent=text; d.style.color=color||'#fff';
+  if(streak>=2) d.style.fontSize=Math.min(21+(streak-1)*3, 32)+'px';   // hotter streak — bigger pop
   d.style.left=(r.left+r.width/2)+'px'; d.style.top=(r.top-6)+'px';
   document.body.appendChild(d);
   d.addEventListener('animationend',()=>d.remove(),{once:true});

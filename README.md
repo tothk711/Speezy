@@ -1,4 +1,4 @@
-# Špeezy — Multiplayer (v4.3)
+# Špeezy — Multiplayer (v4.4)
 
 A real-time multiplayer math dice game. One shared game runs forever on the
 server; anyone who opens the URL joins the round in progress. Up to 6 players.
@@ -17,6 +17,19 @@ Open http://localhost:3000 in a few tabs.
 Push these files to your repo root. Railway runs `npm install` then `npm start`
 and reads `PORT` automatically. (Make sure auto-deploy is enabled in
 Settings → "Auto deploys when pushed to GitHub".) Don't commit `node_modules`.
+
+## What's new in 4.4
+- **Streaks are a spectacle now.** Collection streaks are tracked for every
+  player (not just you): the streaker's score in the top bar catches fire for
+  a second (🔥 flame + glow pulse), the floating "+N 🔥×streak" text grows with
+  the streak, and your own success chime still climbs in pitch.
+- **Duplicate dice dim correctly.** With a roll like 3·3·10, tapping the
+  second "3" key now greys out *that* key, not the first one.
+- **Three new dopamine hits:** a full-screen edge glow flashes in the locker's
+  color on every pair lock (gold for bounty locks); the board deals itself in
+  with a staggered cascade at round start; and round end fires a winner
+  celebration — confetti burst over the banner + edge glow in the winner's
+  color.
 
 ## What's new in 4.3
 - **The extras drawer actually opens now.** Root cause of it appearing to do
